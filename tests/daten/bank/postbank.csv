@@ -1,0 +1,12 @@
+﻿Umsätze
+Konto;Filial-/Kontonummer;IBAN;Währung
+Postbank Giro plus;123 4567890 00;DE02100100100006820101;EUR
+
+1.3.2026 - 31.3.2026
+Letzter Kontostand;;;;3.548,71;EUR
+Vorgemerkte und noch nicht gebuchte Umsätze sind nicht Bestandteil dieser Übersicht.
+Buchungstag;Wert;Umsatzart;Begünstigter / Auftraggeber;Verwendungszweck;IBAN / Kontonummer;BIC;Kundenreferenz;Mandatsreferenz;Gläubiger ID;Fremde Gebühren;Betrag;Abweichender Empfänger;Anzahl der Aufträge;Anzahl der Schecks;Soll;Haben;Währung
+20.3.2026;20.3.2026;SEPA Überweisung;Erika Mustermann;RE 2026-007 Dolmetschen;DE02200505501015871393;;NOTPROVIDED;;;;750;;;;;750;EUR
+12.3.2026;12.3.2026;SEPA Lastschrift;Mobilfunk Beispiel GmbH;Kd-Nr.: 4711, Rg-Nr.: 2026/03;DE02200505501015871393;;MUSTER2026030001;MUSTER-0815;DE98ZZZ09999999999;;-29,99;;;;-29,99;;EUR
+2.3.2026;2.3.2026;Kartenzahlung;BAECKEREI MUSTER;BAECKEREI MUSTER//Musterstadt/DE 01-03-2026T09:14:00  Folgenr. 04  Verfalld. 1229;DE02370502990000684712;;6015979513224416;;;;-100,8;;;;-100,8;;EUR
+Kontostand;31.3.2026;;;4.168,92;EUR

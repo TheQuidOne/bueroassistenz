@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titel %}Übersicht{% endblock %} · Büroassistenz</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%232451c7'/%3E%3Ctext x='16' y='22' font-family='-apple-system,sans-serif' font-size='17' font-weight='700' fill='white' text-anchor='middle'%3EA%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="{{ url_for('static', filename='stil.css') }}">
+</head>
+<body>
+{% include "_symbole.html" %}
+{% set seite = request.endpoint or '' %}
+<div class="app">
+  <aside class="leiste">
+    <a class="marke" href="{{ url_for('start') }}" title="Büroassistenz · {{ UNTERZEILE }}"><span class="logo">B</span><span>Büroassistenz</span></a>
+    <a class="knopf haupt breit neu" href="{{ url_for('rechnung_neu') }}" data-tour="neue-rechnung">{{ symbol('plus') }}Neue Rechnung</a>
+    <nav aria-label="Hauptmenü">
+      <a href="{{ url_for('start') }}" data-tour="nav-uebersicht" {% if seite == 'start' %}aria-current="page"{% endif %}>{{ symbol('start') }}<span class="beschriftung">Übersicht</span>
+        {% if zaehler.aufgaben %}<span class="zahl-marke">{{ zaehler.aufgaben }}</span>{% endif %}</a>
+      <a href="{{ url_for('rechnungsliste') }}" data-tour="nav-rechnungen" {% if seite.startswith('rechnung') %}aria-current="page"{% endif %}>{{ symbol('rechnung') }}<span class="beschriftung">Rechnungen</span>
+        {% if zaehler.ueberfaellig %}<span class="zahl-marke rot" title="überfällig">{{ zaehler.ueberfaellig }}</span>{% endif %}</a>
+      <a href="{{ url_for('bank') }}" data-tour="nav-konto" {% if seite in ('bank', 'einnahmen') %}aria-current="page"{% endif %}>{{ symbol('konto') }}<span class="beschriftung">Konto</span>
+        {% if zaehler.konto %}<span class="zahl-marke" title="noch einzuordnen">{{ zaehler.konto }}</span>{% endif %}</a>
+      <a href="{{ url_for('post') }}" data-tour="nav-post" {% if seite in ('post', 'mail_ansehen', 'post_einstellungen') %}aria-current="page"{% endif %}>{{ symbol('post') }}<span class="beschriftung">Post</span>
+        {% if ki_liest.laeuft %}<span class="puls nav-puls" title="Die KI liest gerade Mails"></span>{% endif %}</a>
+      <a href="{{ url_for('kalender') }}" data-tour="nav-kalender" {% if seite == 'kalender' %}aria-current="page"{% endif %}>{{ symbol('kalender') }}<span class="beschriftung">Kalender</span></a>
+      <a href="{{ url_for('jahresuebersicht') }}" data-tour="nav-auswertung" {% if seite == 'jahresuebersicht' %}aria-current="page"{% endif %}>{{ symbol('auswertung') }}<span class="beschriftung">Auswertung</span></a>
+      <a href="{{ url_for('kundenliste') }}" data-tour="nav-kunden" {% if seite.startswith('kunde') %}aria-current="page"{% endif %}>{{ symbol('kunden') }}<span class="beschriftung">Kunden</span></a>
+    </nav>
+    <div class="unten">
+      <nav aria-label="Weiteres">
+        <a href="{{ url_for('einstellungen') }}" data-tour="nav-einstellungen" {% if seite == 'einstellungen' %}aria-current="page"{% endif %}>{{ symbol('einstellungen') }}<span class="beschriftung">Einstellungen</span></a>
+        <a href="{{ url_for('hilfe') }}" data-tour="nav-hilfe" {% if seite == 'hilfe' %}aria-current="page"{% endif %}>{{ symbol('hilfe') }}<span class="beschriftung">Hilfe</span></a>
+      </nav>
+      <div class="lokal">{{ symbol('schloss') }}Alle Daten bleiben auf diesem Rechner</div>
+    </div>
+  </aside>
+
+  <main class="inhalt">
+    <div class="rahmen">
+      {% with meldungen = get_flashed_messages(with_categories=true) %}
+        {% for art, text in meldungen %}
+        <div class="meldung {{ art }}" role="status" {% if art == 'ok' %}data-weg{% endif %}>
+          {{ symbol('haken' if art == 'ok' else 'achtung') }}<span class="text">{{ text }}</span>
+          <button type="button" class="schliessen" aria-label="Schließen" onclick="this.parentElement.remove()">{{ symbol('x') }}</button>
+        </div>
+        {% endfor %}
+      {% endwith %}
+      {% if merken_angebot %}
+      <form class="meldung angebot" method="post" action="{{ url_for('umsatz_merken', umsatz_id=merken_angebot.umsatz_id) }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="weiter" value="{{ request.full_path }}">
+        {{ symbol('stern') }}
+        <span class="text">Alle Buchungen von <strong>{{ merken_angebot.gegenpartei }}</strong> künftig als „{{ merken_angebot.text }}“ einordnen?</span>
+        <button class="klein-knopf" data-tour="regel-merken">Immer so einordnen</button>
+        <button type="button" class="schliessen" aria-label="Nein danke" onclick="this.parentElement.remove()">{{ symbol('x') }}</button>
+      </form>
+      {% endif %}
+      {% block inhalt %}{% endblock %}
+    </div>
+  </main>
+</div>
+<script>
+  // Klickbare Tabellenzeilen, selbst absendende Auswahlfelder, Erfolgsmeldungen ausblenden.
+  document.querySelectorAll("tr[data-href]").forEach(function (tr) {
+    tr.addEventListener("click", function (e) {
+      if (!e.target.closest("a, button, select, input, form")) location.href = tr.dataset.href;
+    });
+  });
+  document.querySelectorAll("select[data-auto]").forEach(function (s) {
+    s.addEventListener("change", function () { if (s.value !== "") s.form.submit(); });
+  });
+  setTimeout(function () {
+    document.querySelectorAll("[data-weg]").forEach(function (m) { m.remove(); });
+  }, 6000);
+</script>
+</body>
+</html>

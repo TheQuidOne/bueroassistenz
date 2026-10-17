@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% from "_diagramme.html" import monatsbalken with context %}
+{% block titel %}Konto{% endblock %}
+{% block inhalt %}
+<header class="seitenkopf">
+  <div>
+    <h1>Konto</h1>
+    <p class="untertitel">Kontoauszug einlesen, Zahlungen zuordnen, Ausgaben einordnen.</p>
+  </div>
+</header>
+
+<a class="karte einnahmen-kurz" href="{{ url_for('einnahmen', jahr=e.jahr) }}" data-tour="einnahmen-kurz">
+  <div class="einnahmen-zahl">
+    <div class="leise klein">Eingenommen {{ e.jahr }}</div>
+    <div class="wert">{{ e.gesamt|euro }}</div>
+    <div class="leise klein">{% if e.vergleich is not none %}{{ '+' if e.vergleich > 0 }}{{ e.vergleich }} % zum Vorjahr{% if e.laufend %} bis heute{% endif %}{% else %}aus bezahlten Rechnungen und sonstigen Einnahmen{% endif %}</div>
+  </div>
+  <div class="einnahmen-balken">{{ monatsbalken(e) }}</div>
+  <span class="weiter">Einnahmen im Detail{{ symbol('pfeil') }}</span>
+</a>
+
+<form method="post" action="{{ url_for('bank_import') }}" enctype="multipart/form-data" id="import">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <label class="ablage" data-tour="csv-ablage">
+    <span class="symbol">{{ symbol('hochladen') }}</span>
+    <span style="flex: 1">
+      <strong>Kontoauszug hierher ziehen oder auswählen</strong>
+      <span class="leise klein">CSV-Datei aus dem Online-Banking. Bereits eingelesene Buchungen werden erkannt und übersprungen.
+        {% if letzter %}Zuletzt eingelesen am {{ letzter.zeitpunkt|datum }}.{% endif %}</span>
+    </span>
+    <span class="knopf">Datei auswählen</span>
+    <input type="file" name="datei" accept=".csv,text/csv" required>
+  </label>
+  <noscript><button class="haupt" style="margin-top: 8px">Einlesen</button></noscript>
+</form>
+<details class="mehr">
+  <summary>{{ symbol('pfeil') }}So bekommen Sie die CSV-Datei aus dem Online-Banking</summary>
+  <div class="innen leise">
+    Im Online-Banking das Konto öffnen und die <strong>Umsätze</strong> anzeigen. Zeitraum wählen (ruhig großzügig, doppelte Buchungen werden übersprungen)
+    und <strong>Export → CSV</strong> wählen. Bei manchen Banken heißt es „Umsätze herunterladen“ oder „CSV-CAMT“. Die Datei landet im Ordner „Downloads“ und kann von dort hierher gezogen werden.
+  </div>
+</details>
+
+{% if vorschlaege %}
+<div class="abschnitt-kopf"><h2>Bitte prüfen</h2><span class="leise klein">Diese Zahlungen passen vermutlich zu einer Rechnung.</span></div>
+<div class="karte ohne-rand">
+  <ul class="liste">
+    {% for e in vorschlaege %}
+    <li>
+      <span class="symbol blau">{{ symbol('eingang') }}</span>
+      <div class="haupttext">
+        <strong>{{ e.v.betrag|euro }} von {{ e.v.gegenpartei or 'unbekannt' }}</strong> <span class="leise">am {{ e.v.datum|datum }}</span>
+        <div class="nebentext">{{ e.v.grund }} {% for r in e.rechnungen %}<a href="{{ url_for('rechnung_ansehen', rechnung_id=r.id) }}">Rechnung {{ r.nummer }} ansehen</a>{% if not loop.last %} · {% endif %}{% endfor %}</div>
+        {% if e.v.zweck %}<div class="zweck">„{{ e.v.zweck }}“</div>{% endif %}
+      </div>
+      <div class="knoepfe">
+        <form class="inline" method="post" action="{{ url_for('vorschlag_ablehnen', umsatz_id=e.v.umsatz_id) }}">
+          <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="weiter" value="{{ request.full_path }}">
+          <button class="zart">Stimmt nicht</button>
+        </form>
+        <form class="inline" method="post" action="{{ url_for('vorschlag_annehmen', umsatz_id=e.v.umsatz_id) }}">
+          <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="weiter" value="{{ request.full_path }}">
+          <button class="haupt" {% if loop.first %}data-tour="vorschlag-stimmt"{% endif %}>{{ symbol('haken') }}Stimmt</button>
+        </form>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<div class="abschnitt-kopf"><h2>Buchungen</h2></div>
+<nav class="segmente" aria-label="Filter">
+  {% for schluessel, text in [('offen', 'Noch einordnen'), ('eingaenge', 'Eingänge'), ('ausgaben', 'Ausgaben'), ('alle', 'Alle')] %}
+  <a href="{{ url_for('bank', filter=schluessel) }}" {% if filter == schluessel %}aria-current="page"{% endif %}>{{ text }}{% if schluessel == 'offen' and zaehler.konto %}<span class="anzahl">{{ zaehler.konto }}</span>{% endif %}</a>
+  {% endfor %}
+</nav>
+
+<div class="karte ohne-rand">
+  {% if liste %}
+  {% set merker = namespace(erstes=false) %}
+  <div class="tabelle-huelle"><table>
+    <thead><tr><th>Datum</th><th>Von / An</th><th class="rechts">Betrag</th><th>Einordnung</th></tr></thead>
+    <tbody>
+    {% for e in liste %}{% set u = e.u %}
+      <tr>
+        <td class="leise">{{ u.datum|datum }}</td>
+        <td><strong style="font-weight: 550">{{ u.gegenpartei or '–' }}</strong><div class="zweck" title="{{ u.zweck }}">{{ u.zweck }}</div></td>
+        <td class="zahl {{ 'eingang' if u.betrag > 0 }}">{{ '+ ' if u.betrag > 0 }}{{ u.betrag|euro }}</td>
+        <td class="einordnen">
+          {% if u.kategorie == 'rechnung' %}
+            <span class="pille z-bezahlt">Rechnung {% for b in e.bezahlt %}<a href="{{ url_for('rechnung_ansehen', rechnung_id=b.id) }}" style="color: inherit">{{ b.nummer }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</span>
+          {% else %}
+          <form method="post" action="{{ url_for('umsatz_einordnen', umsatz_id=u.id) }}">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <input type="hidden" name="weiter" value="{{ request.full_path }}">
+            <select name="wahl" data-auto aria-label="Einordnung" {% if not u.kategorie and not merker.erstes %}data-tour="kategorie-waehlen"{% set merker.erstes = true %}{% endif %}>
+              <option value="" {% if not u.kategorie %}selected{% endif %} disabled>{{ 'Einordnen …' if not u.kategorie else '' }}</option>
+              {% if u.betrag > 0 %}
+                {% if not u.kategorie and offene %}
+                <optgroup label="Bezahlt eine Rechnung">
+                  {% for o in offene %}<option value="rechnung:{{ o.id }}">{{ o.nummer }} · {{ o.kunde }} · {{ o.offen|euro }}</option>{% endfor %}
+                </optgroup>
+                {% endif %}
+                <optgroup label="Andere Einnahme">
+                  {% for k, text in EINNAHMEN.items() %}<option value="{{ k }}" {% if u.kategorie == k %}selected{% endif %}>{{ text }}</option>{% endfor %}
+                  <option value="privat" {% if u.kategorie == 'privat' %}selected{% endif %}>Privat (zählt nicht)</option>
+                </optgroup>
+              {% else %}
+                <optgroup label="Betriebsausgabe">
+                  {% for k, text in AUSGABEN.items() %}<option value="{{ k }}" {% if u.kategorie == k %}selected{% endif %}>{{ text }}</option>{% endfor %}
+                </optgroup>
+                <option value="privat" {% if u.kategorie == 'privat' %}selected{% endif %}>Privat (zählt nicht)</option>
+              {% endif %}
+            </select>
+            <noscript><button class="klein-knopf">Speichern</button></noscript>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}
+  <div class="leer">{% if filter == 'offen' %}{{ symbol('haken', 'gross') }}<div><strong>Alles eingeordnet.</strong></div>{% else %}Noch keine Buchungen. Lesen Sie oben Ihren ersten Kontoauszug ein.{% endif %}</div>
+  {% endif %}
+</div>
+
+<script>
+  // Datei ablegen oder auswählen: sofort einlesen.
+  (function () {
+    const form = document.getElementById("import");
+    const feld = form.querySelector("input[type=file]");
+    const ablage = form.querySelector(".ablage");
+    feld.addEventListener("change", () => { if (feld.files.length) form.submit(); });
+    ["dragenter", "dragover"].forEach(t => document.addEventListener(t, e => { e.preventDefault(); ablage.classList.add("ueber"); }));
+    ["dragleave", "drop"].forEach(t => document.addEventListener(t, e => { e.preventDefault(); ablage.classList.remove("ueber"); }));
+    document.addEventListener("drop", e => {
+      if (e.dataTransfer && e.dataTransfer.files.length) { feld.files = e.dataTransfer.files; form.submit(); }
+    });
+  })();
+</script>
+{% endblock %}

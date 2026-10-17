@@ -1,0 +1,43 @@
+From: Integrationsamt Musterland <auftraege@integrationsamt-musterland.example>
+To: max.beispiel@example.org
+Subject: Auftragsbestätigung IA-2026-0815
+Date: Thu, 08 Oct 2026 10:00:00 +0200
+Message-ID: <anhang-1@integrationsamt-musterland.example>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="grenze-aussen"
+
+--grenze-aussen
+Content-Type: multipart/related; boundary="grenze-innen"
+
+--grenze-innen
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+
+Anbei erhalten Sie die Auftragsbestätigung und die Kostenzusage.
+
+--grenze-innen
+Content-Type: image/png; name="logo.png"
+Content-Disposition: inline; filename="logo.png"
+Content-ID: <logo@integrationsamt-musterland.example>
+Content-Transfer-Encoding: base64
+
+iVBORw0KGgo=
+
+--grenze-innen--
+
+--grenze-aussen
+Content-Type: application/pdf; name="Auftragsbestaetigung.pdf"
+Content-Disposition: attachment;
+ filename*=UTF-8''Auftragsbest%C3%A4tigung%20IA-2026-0815.pdf
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQKJWVyZnVuZGVuCg==
+
+--grenze-aussen
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="=?iso-8859-1?Q?Kostenzusage_K=F6ln.pdf?="
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQKJWVyZnVuZGVuCg==
+
+--grenze-aussen--

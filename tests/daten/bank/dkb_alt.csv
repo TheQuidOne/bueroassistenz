@@ -1,0 +1,10 @@
+"Kontonummer:";"DE02120300000000202051 / Girokonto";
+
+"Von:";"01.03.2023";
+"Bis:";"31.03.2023";
+"Kontostand vom 31.03.2023:";"1.111,11 EUR";
+
+"Buchungstag";"Wertstellung";"Buchungstext";"Auftraggeber / Begünstigter";"Verwendungszweck";"Kontonummer";"BLZ";"Betrag (EUR)";"Gläubiger-ID";"Mandatsreferenz";"Kundenreferenz";
+"20.03.2023";"20.03.2023";"Gutschrift";"Gehörlosenverband Beispielland e.V.";"RE 2023-017 Dolmetschen Vereinsversammlung";"DE02200505501015871393";"TESTDEFFXXX";"1.428,00";"";"";"NOTPROVIDED";
+"15.03.2023";"15.03.2023";"";"";"Tagessaldo";"";"";"1.111,11";"";"";"";
+"15.03.2023";"15.03.2023";"Folgelastschrift";"Mobilfunk Beispiel GmbH";"Mobilfunk Rechnung 02/2023";"DE02100100100006820101";"BEISDEFFXXX";"-29,99";"DE98ZZZ09999999999";"MUSTER-0815";"";

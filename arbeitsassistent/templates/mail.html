@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block titel %}{{ m.betreff or 'Mail' }}{% endblock %}
+{% block inhalt %}
+<header class="seitenkopf">
+  <div>
+    <a class="leise klein" href="{{ url_for('post') }}">← Alle Mails</a>
+    <h1 style="margin-top: 6px">{{ m.betreff or '(ohne Betreff)' }}</h1>
+    <p class="untertitel">{{ m.absender_name }} &lt;{{ m.absender_adresse }}&gt;{% if m.datum %} · {{ m.datum|datum }}, {{ m.datum[11:16] }} Uhr{% endif %}</p>
+  </div>
+</header>
+
+{% for h in hinweise if h.status == 'offen' %}
+<div class="meldung hinweis">{{ symbol('achtung') }}<span class="text"><strong>{{ h.titel }}</strong>{% if h.text %} – {{ h.text }}{% endif %}</span>
+  {% if h.art in ('abrechnen', 'absage') %}<a class="knopf klein-knopf haupt" href="{{ url_for('rechnung_neu', hinweis=h.id) }}">Rechnung vorbereiten</a>
+  {% elif h.rechnung_id %}<a class="knopf klein-knopf" href="{{ url_for('rechnung_ansehen', rechnung_id=h.rechnung_id) }}">Rechnung {{ rechnungen_[h.rechnung_id].nummer }}</a>{% endif %}
+  <form class="inline" method="post" action="{{ url_for('hinweis_setzen', hinweis_id=h.id, status='erledigt') }}">
+    <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="weiter" value="{{ request.path }}">
+    <button class="klein-knopf">Erledigt</button>
+  </form>
+</div>
+{% endfor %}
+
+<div class="raster seite">
+  <article class="karte">
+    <div class="mehrzeilig" style="font-size: 15px; line-height: 1.6; overflow-wrap: anywhere">{{ m.text or '(kein Text)' }}</div>
+    {% if anhaenge %}
+    <div class="leise klein" style="margin-top: 18px; border-top: 1px solid var(--linie); padding-top: 12px">Anhänge: {{ anhaenge|join(', ') }}</div>
+    {% endif %}
+  </article>
+
+  <aside>
+    <div class="karte" data-tour="ki-auswertung">
+      <div class="karte-kopf"><h3>{{ symbol('ki') }} Was die KI erkannt hat</h3></div>
+      {% if a %}
+        <div style="margin-bottom: 10px"><span class="pille {{ 'z-offen' if a.arbeit else '' }}">{{ MAILARTEN.get(a.art, a.art) if a.arbeit or a.art == 'verdaechtig' else 'Keine Arbeits-Mail' }}</span></div>
+        {% if a.zusammenfassung %}<p style="margin: 0 0 12px">{{ a.zusammenfassung }}</p>{% endif %}
+        <dl class="eckdaten">
+          {% if a.einsatz_datum %}<dt>Einsatz</dt><dd>{{ a.einsatz_datum|datum }}{% if a.einsatz_beginn %}, {{ a.einsatz_beginn }} Uhr{% endif %}</dd>{% endif %}
+          {% if a.dauer_stunden %}<dt>Dauer</dt><dd>{{ a.dauer_stunden|menge }} Std.</dd>{% endif %}
+          {% if a.auftraggeber %}<dt>Auftraggeber</dt><dd>{{ a.auftraggeber }}</dd>{% endif %}
+          {% if a.aktenzeichen %}<dt>Aktenzeichen</dt><dd>{{ a.aktenzeichen }}</dd>{% endif %}
+          {% if a.rechnungsnummer %}<dt>Rechnung</dt><dd>{{ a.rechnungsnummer }}</dd>{% endif %}
+          {% if a.frist %}<dt>Frist</dt><dd>{{ a.frist|datum }}</dd>{% endif %}
+        </dl>
+        {% if a.hinweis %}<p class="leise klein" style="margin: 12px 0 0">{{ a.hinweis }}</p>{% endif %}
+      {% elif m.status == 'fehler' %}
+        <p class="leise" style="margin: 0">Diese Mail konnte die KI nicht lesen.</p>
+      {% else %}
+        <p class="leise" style="margin: 0">Wird gerade gelesen …</p>
+      {% endif %}
+      <form method="post" action="{{ url_for('mail_neu_auswerten', mail_id=m.id) }}" style="margin-top: 14px">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <button class="zart klein-knopf">Neu auswerten</button>
+      </form>
+    </div>
+    <p class="leise klein" style="margin: 12px 4px">Die KI macht nur Vorschläge. Rechnungen ändert sie nie.</p>
+  </aside>
+</div>
+{% endblock %}

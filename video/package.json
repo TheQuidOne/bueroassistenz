@@ -1,0 +1,14 @@
+{
+  "name": "arbeits-assistent-video",
+  "private": true,
+  "type": "module",
+  "description": "Video-Tutorial für den Arbeits-Assistenten: Aufnahmen der App und HyperFrames-Komposition",
+  "scripts": {
+    "aufnehmen": "node aufnahme.mjs",
+    "check": "cd tutorial && HYPERFRAMES_NO_TELEMETRY=1 DO_NOT_TRACK=1 HYPERFRAMES_SKIP_SKILLS=1 npx --yes hyperframes@0.8.81 check",
+    "render": "node rendern.mjs"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^24.0.0"
+  }
+}

@@ -1,0 +1,8 @@
+Umsätze Persönliches Konto (00);;;Kundennummer: 123 4567890
+01.03.2026 - 31.03.2026
+Letzter Kontostand;;;;3.548,71;EUR
+Vorgemerkte und noch nicht gebuchte Umsätze sind nicht Bestandteil dieser Übersicht.
+Buchungstag;Wert;Umsatzart;Begünstigter / Auftraggeber;Verwendungszweck;IBAN;BIC;Kundenreferenz;Mandatsreferenz ;Gläubiger ID;Fremde Gebühren;Betrag;Abweichender Empfänger;Anzahl der Aufträge;Anzahl der Schecks;Soll;Haben;Währung
+20.03.2026;20.03.2026;SEPA-Gutschrift von;Stadt Musterstadt;RE 2026-005 Dolmetschen Elterngespräch;DE02500105170137075030;MUSTDEFFXXX;;;;;;;;;;1.202,10;EUR
+12.03.2026;12.03.2026;SEPA-Lastschrift von;Mobilfunk Beispiel GmbH;Mobilfunk Rechnung 02/2026;DE02100100100006820101;BEISDEFFXXX;;MUSTER-0815;DE98ZZZ09999999999;;;;;;-29,99;;EUR
+Kontostand;31.03.2026;;;4.720,82;EUR

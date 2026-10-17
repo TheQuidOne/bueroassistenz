@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+{% block titel %}Einstellungen{% endblock %}
+{% block inhalt %}
+<header class="seitenkopf">
+  <div>
+    <h1>Einstellungen</h1>
+    <p class="untertitel">Ihre Angaben auf den Rechnungen, Leistungen mit Preisen und Ihre Daten.</p>
+  </div>
+</header>
+
+<form method="post" class="karte">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+
+  <div class="formular-abschnitt" id="angaben" data-tour="angaben">
+    <div><h3>Ihre Angaben</h3><p>Stehen auf jeder Rechnung: im Briefkopf und in der Fußzeile.</p></div>
+    <div>
+      <div class="felder">
+        <div class="feld"><label for="name">Name</label><input id="name" name="name" value="{{ einst.name }}"></div>
+        <div class="feld"><label for="zusatz">Berufsbezeichnung</label><input id="zusatz" name="zusatz" value="{{ einst.zusatz }}"></div>
+      </div>
+      <div class="felder">
+        <div class="feld"><label for="strasse">Straße und Hausnummer</label><input id="strasse" name="strasse" value="{{ einst.strasse }}"></div>
+        <div class="feld"><label for="plz_ort">PLZ und Ort</label><input id="plz_ort" name="plz_ort" value="{{ einst.plz_ort }}"></div>
+      </div>
+      <div class="felder">
+        <div class="feld"><label for="telefon">Telefon</label><input id="telefon" name="telefon" value="{{ einst.telefon }}"></div>
+        <div class="feld"><label for="email">E-Mail</label><input id="email" name="email" value="{{ einst.email }}"></div>
+      </div>
+      <div class="felder">
+        <div class="feld"><label for="steuernummer">Steuernummer</label><input id="steuernummer" name="steuernummer" value="{{ einst.steuernummer }}"></div>
+        <div class="feld"><label for="ust_id">USt-IdNr. <span class="leise">(falls vorhanden)</span></label><input id="ust_id" name="ust_id" value="{{ einst.ust_id }}"></div>
+      </div>
+      <div class="felder">
+        <div class="feld">
+          <label for="ik">Institutionskennzeichen (IK) <span class="leise">(falls vorhanden)</span></label>
+          <input id="ik" name="ik" inputmode="numeric" maxlength="12" value="{{ einst.ik }}" placeholder="9 Ziffern">
+          <div class="hilfe">Für die Abrechnung mit Krankenkassen und anderen Sozialleistungsträgern. Steht dann auf jeder Rechnung.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="formular-abschnitt">
+    <div><h3>Bankverbindung</h3><p>Für den Zahlungshinweis und den Überweisungs-QR-Code auf der Rechnung.</p></div>
+    <div class="felder">
+      <div class="feld"><label for="iban">IBAN</label><input id="iban" name="iban" value="{{ einst.iban }}"></div>
+      <div class="feld"><label for="bic">BIC</label><input id="bic" name="bic" value="{{ einst.bic }}"></div>
+      <div class="feld"><label for="bank">Bank</label><input id="bank" name="bank" value="{{ einst.bank }}"></div>
+      <div class="feld"><label for="kontoinhaber">Kontoinhaber <span class="leise">(falls abweichend)</span></label><input id="kontoinhaber" name="kontoinhaber" value="{{ einst.kontoinhaber }}"></div>
+    </div>
+  </div>
+
+  <div class="formular-abschnitt">
+    <div><h3>Rechnungen</h3><p>Voreinstellungen für neue Rechnungen.</p></div>
+    <div>
+      <div class="felder">
+        <div class="feld">
+          <label for="steuerfall">Umsatzsteuer</label>
+          <select id="steuerfall" name="steuerfall">
+            {% for schluessel, text in STEUERFAELLE.items() %}<option value="{{ schluessel }}" {% if einst.steuerfall == schluessel %}selected{% endif %}>{{ text }}</option>{% endfor %}
+          </select>
+          <div class="hilfe">Gilt, wenn beim Kunden nichts anderes steht.</div>
+        </div>
+        <div class="feld"><label for="zahlungsziel">Zahlungsziel (Tage)</label><input id="zahlungsziel" name="zahlungsziel" inputmode="numeric" value="{{ einst.zahlungsziel }}"></div>
+      </div>
+      <div class="felder" data-tour="rechnungsnummer">
+        <div class="feld">
+          <label for="nummer_format">Format der Rechnungsnummer</label>
+          <input id="nummer_format" name="nummer_format" value="{{ einst.nummer_format }}" placeholder="JJJJ-NNN">
+          <div class="hilfe">JJJJ = Jahr, MM = Monat, NNN = laufende Nummer (mit Nullen auf 3 Stellen). Beispiel: JJJJ-MM-NNN ergibt 2026-09-147.</div>
+        </div>
+        <div class="feld">
+          <label for="nummer_neu_ab">Laufende Nummer beginnt neu</label>
+          <select id="nummer_neu_ab" name="nummer_neu_ab">
+            {% for schluessel, text in neu_ab.items() %}<option value="{{ schluessel }}" {% if einst.nummer_neu_ab == schluessel %}selected{% endif %}>{{ text }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="feld">
+          <label for="startnummer">Erste laufende Nummer</label>
+          <input id="startnummer" name="startnummer" inputmode="numeric" value="{{ einst.startnummer }}">
+          <div class="hilfe">Zum Weiterzählen nach Ihren bisherigen Rechnungen. Gilt für die erste Rechnung in diesem Format, danach zählt das Programm selbst.</div>
+        </div>
+      </div>
+      <p class="hilfe" style="margin: -4px 0 18px">Die nächste Rechnung bekommt die Nummer <strong>{{ naechste }}</strong>.</p>
+      <div class="felder" data-tour="schrift">
+        <div class="feld">
+          <label for="schrift">Schrift auf Rechnungen</label>
+          <select id="schrift" name="schrift">
+            {% for schluessel, text in schriftarten.items() %}<option value="{{ schluessel }}" {% if einst.schrift == schluessel %}selected{% endif %}>{{ text }}</option>{% endfor %}
+          </select>
+          <div class="hilfe">
+            {% if not arial %}Arial ist auf diesem Rechner nicht installiert. Rechnungen erscheinen dann in Noto Sans.
+            {% elif 'Liberation' in arial[0].name %}Arial fehlt hier, ersetzt durch Liberation Sans mit gleichen Maßen.
+            {% else %}Gilt für Rechnungen und Erinnerungen.{% endif %}
+            <a href="{{ url_for('schriftprobe', schrift=einst.schrift or 'noto') }}" target="_blank" id="schriftprobe">Probe ansehen</a>
+          </div>
+        </div>
+      </div>
+      <div class="feld">
+        <label for="zusatztext">Fester Text auf jeder Rechnung <span class="leise">(optional)</span></label>
+        <textarea id="zusatztext" name="zusatztext" rows="2" placeholder="z. B. Grundlage meines Honorars ist das JVEG in der Fassung vom …">{{ einst.zusatztext }}</textarea>
+        <div class="hilfe">Steht unter dem Rechnungsbetrag. Bei einzelnen Rechnungen lässt er sich unter „Weitere Angaben“ ändern oder entfernen.</div>
+      </div>
+      <div class="felder" data-tour="gruss">
+        <div class="feld">
+          <label for="schluss">Text am Ende</label>
+          <input id="schluss" name="schluss" list="schlusstexte" value="{{ einst.schluss }}" placeholder="Vielen Dank für die Zusammenarbeit.">
+          <datalist id="schlusstexte">
+            <option value="Vielen Dank für die Zusammenarbeit."><option value="Vielen Dank für Ihr Vertrauen.">
+            <option value="Vielen Dank für Ihren Auftrag."><option value="Ich freue mich auf die weitere Zusammenarbeit.">
+          </datalist>
+          <div class="hilfe">Steht vor dem Gruß. Bei einzelnen Rechnungen änderbar.</div>
+        </div>
+        <div class="feld">
+          <label for="grussformel">Grußformel vor der Unterschrift</label>
+          <input id="grussformel" name="grussformel" list="grussformeln" value="{{ einst.grussformel }}" placeholder="keine">
+          <datalist id="grussformeln">
+            <option value="Mit freundlichen Grüßen"><option value="Freundliche Grüße"><option value="Viele Grüße">
+            <option value="Beste Grüße"><option value="Herzliche Grüße">
+          </datalist>
+          <div class="hilfe">Gilt auch für Zahlungserinnerungen. Leer lassen für keine Grußformel.</div>
+        </div>
+      </div>
+      <details class="mehr" style="margin-top: 0">
+        <summary>{{ symbol('pfeil') }}Hinweistexte zur Umsatzsteuer</summary>
+        <div class="innen">
+          <div class="feld"><label for="hinweis_steuerfrei">Bei steuerfreien Leistungen</label><input id="hinweis_steuerfrei" name="hinweis_steuerfrei" value="{{ einst.hinweis_steuerfrei }}"></div>
+          <div class="feld"><label for="hinweis_kleinunternehmer">Als Kleinunternehmer</label><input id="hinweis_kleinunternehmer" name="hinweis_kleinunternehmer" value="{{ einst.hinweis_kleinunternehmer }}"></div>
+          <p class="hilfe" style="margin: 0">Welcher Fall gilt, hängt vom Auftrag ab (z. B. Eingliederungshilfe oder Integrationsamt: oft steuerfrei nach § 4 Nr. 16 UStG). Bitte einmal mit Steuerberatung oder Finanzamt klären.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <div class="knoepfe" style="justify-content: flex-end; border-top: 1px solid var(--linie); padding-top: 18px">
+    <button class="haupt">Einstellungen speichern</button>
+  </div>
+</form>
+
+<div class="abschnitt-kopf" id="unterschrift"><h2>Unterschrift</h2><span class="leise klein">Steht auf Rechnungen und Erinnerungen über Ihrem Namen.</span></div>
+<div class="karte" data-tour="unterschrift">
+  {% if unterschrift %}
+  <div class="unterschrift-vorschau"><img src="{{ url_for('unterschrift_bild') }}?v={{ range(100000)|random }}" alt="Ihre hinterlegte Unterschrift"></div>
+  {% else %}
+  <p class="leise klein" style="margin-top: 0">Noch keine Unterschrift hinterlegt. So geht es: mit dunklem Stift auf weißem Papier unterschreiben, mit dem iPhone fotografieren oder scannen und die Datei hier auswählen. Das Programm macht den Hintergrund weiß und schneidet die Unterschrift passend zu.</p>
+  {% endif %}
+  <div class="knoepfe" style="align-items: center; flex-wrap: wrap">
+    <form method="post" action="{{ url_for('unterschrift_hochladen') }}" enctype="multipart/form-data" class="knoepfe" style="align-items: center; flex-wrap: wrap">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="file" name="datei" accept="image/*,.pdf,.heic" required style="width: auto; max-width: 340px">
+      <button>{{ symbol('plus') }}{{ 'Andere Unterschrift hochladen' if unterschrift else 'Unterschrift hochladen' }}</button>
+    </form>
+    {% if unterschrift %}
+    <form method="post" action="{{ url_for('unterschrift_entfernen') }}" class="inline" onsubmit="return confirm('Unterschrift entfernen? Neue Rechnungen erscheinen dann ohne Unterschrift.')">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="zart gefahr">Entfernen</button>
+    </form>
+    {% endif %}
+  </div>
+  <p class="hilfe" style="margin-bottom: 0">Die Datei bleibt nur auf diesem Rechner im Datenordner. Bereits ausgestellte Rechnungen ändern sich nicht.</p>
+</div>
+
+<div class="abschnitt-kopf" id="vorlagen"><h2>Leistungen und Preise</h2><span class="leise klein">Stehen beim Schreiben einer Rechnung in der Auswahl „Leistung wählen“.</span></div>
+<div class="karte" data-tour="vorlagen">
+  {% if vorlagen %}
+  <table style="margin: -8px 0 12px">
+    <tbody>
+    {% for v in vorlagen %}
+      <tr>
+        <td style="padding-left: 0">{{ v.beschreibung }}</td><td class="leise">{{ v.einheit }}</td><td class="zahl">{{ v.einzelpreis|euro }}</td>
+        <td class="rechts" style="padding-right: 0">
+          <form class="inline" method="post" action="{{ url_for('vorlage_weg', vorlage_id=v.id) }}">
+            <input type="hidden" name="csrf" value="{{ csrf }}"><button class="zart klein-knopf" title="Löschen" aria-label="Löschen">{{ symbol('x') }}</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+  <form method="post" action="{{ url_for('vorlage_neu') }}" class="felder" style="align-items: end">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="feld"><label for="v_beschreibung">Leistung</label><input id="v_beschreibung" name="beschreibung" placeholder="z. B. Dolmetscheinsatz DGS"></div>
+    <div class="feld"><label for="v_einheit">Einheit</label><input id="v_einheit" name="einheit" placeholder="Std."></div>
+    <div class="feld"><label for="v_preis">Preis (€)</label><input id="v_preis" name="preis" inputmode="decimal" placeholder="85,00"></div>
+    <div class="feld"><button class="breit">{{ symbol('plus') }}Hinzufügen</button></div>
+  </form>
+</div>
+
+{% if regeln %}
+<div class="abschnitt-kopf" id="regeln"><h2>Gemerkte Einordnungen</h2><span class="leise klein">Buchungen dieser Absender werden automatisch eingeordnet.</span></div>
+<div class="karte ohne-rand"><table>
+  <tbody>
+  {% for r in regeln %}
+    <tr>
+      <td>{{ r.muster }}</td><td class="leise">{{ KATEGORIEN.get(r.kategorie, r.kategorie) }}</td>
+      <td class="rechts">
+        <form class="inline" method="post" action="{{ url_for('regel_weg', regel_id=r.id) }}">
+          <input type="hidden" name="csrf" value="{{ csrf }}"><button class="zart klein-knopf">Vergessen</button>
+        </form>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% endif %}
+
+<div class="abschnitt-kopf"><h2>E-Mail und KI</h2></div>
+<div class="karte">
+  <ul class="liste" style="margin: -14px -22px">
+    <li>
+      <span class="symbol blau">{{ symbol('post') }}</span>
+      <div class="haupttext">
+        <strong>{{ einst.mail_benutzer or 'Kein Postfach verbunden' }}</strong>
+        <div class="nebentext">Die KI auf diesem Mac liest Ihre Mails und erinnert an Aufträge ohne Rechnung, Absagen und Rückfragen.</div>
+      </div>
+      <a class="knopf" href="{{ url_for('post_einstellungen') }}">{{ 'Ändern' if einst.mail_benutzer else 'Einrichten' }}{{ symbol('pfeil') }}</a>
+    </li>
+  </ul>
+</div>
+
+<div class="abschnitt-kopf"><h2>Ihre Daten</h2></div>
+<div class="karte">
+  <ul class="liste" style="margin: -14px -22px">
+    <li>
+      <span class="symbol gruen">{{ symbol('schloss') }}</span>
+      <div class="haupttext">
+        <strong>Alles bleibt auf diesem Rechner</strong>
+        <div class="nebentext">Datenbank, ausgestellte Rechnungen (Ordner „rechnungen“) und eingelesene Kontoauszüge (Ordner „importe“) liegen in <code>{{ ordner }}</code>. Time Machine sichert den Ordner mit.</div>
+      </div>
+      <form class="inline" method="post" action="{{ url_for('ordner_oeffnen') }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="weiter" value="{{ url_for('einstellungen') }}">
+        <button data-tour="ordner-oeffnen">{{ symbol('ordner') }}Ordner öffnen</button>
+      </form>
+    </li>
+  </ul>
+</div>
+<script>
+// Die Probe zeigt immer die gerade ausgewählte Schrift, auch vor dem Speichern.
+document.getElementById("schrift").addEventListener("change", e => {
+  const probe = document.getElementById("schriftprobe");
+  probe.href = probe.href.replace(/schrift=[a-z]+/, "schrift=" + e.target.value);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,5 @@
+"Booking Date","Value Date","Partner Name","Partner Iban",Type,"Payment Reference","Account Name","Amount (EUR)","Original Amount","Original Currency","Exchange Rate"
+2026-03-02,2026-03-02,"Erika Mustermann",DE02200505501015871393,"Credit Transfer","RE 2026-004",Hauptkonto,95.20,,,
+2026-03-03,,"BAECKEREI MUSTER",,Presentment,,Hauptkonto,-4.5,,,
+2026-03-05,2026-03-05,"Landschaftsverband Musterland",DE02300209000106531065,"Credit Transfer","RE 2026-001 RE 2026-002",Hauptkonto,1080.00,,,
+2026-03-07,2026-03-07,"CAFE BEISPIEL",,Presentment,,Hauptkonto,-17.77,194,SEK,0.0915979381

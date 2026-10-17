@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block titel %}Hilfe{% endblock %}
+{% block inhalt %}
+<header class="seitenkopf">
+  <div>
+    <h1>Hilfe</h1>
+    <p class="untertitel">Büroassistenz · {{ UNTERZEILE }}. Alles Wichtige in zwei Minuten und Antworten auf häufige Fragen.</p>
+  </div>
+</header>
+
+{% if video %}
+<div class="karte" style="padding: 0; overflow: hidden">
+  <video class="video" controls preload="metadata" src="{{ url_for('static', filename='hilfe/tutorial.mp4') }}"
+         poster="{{ url_for('static', filename='hilfe/tutorial.jpg') }}"></video>
+</div>
+{% endif %}
+
+<h2>So funktioniert es</h2>
+<div class="karte ohne-rand">
+  <ul class="liste">
+    <li><span class="symbol blau">{{ symbol('rechnung') }}</span><div class="haupttext"><strong>Rechnung schreiben</strong>
+      <div class="nebentext">„Neue Rechnung“ → Kunde wählen → Leistung eintippen (Preis kommt aus Ihren Vorlagen) → Entwurf speichern → Vorschau prüfen → Ausstellen. Das PDF liegt danach im Ordner „rechnungen“ und kann per E-Mail verschickt werden.</div></div></li>
+    <li><span class="symbol blau">{{ symbol('konto') }}</span><div class="haupttext"><strong>Zahlungen erkennen</strong>
+      <div class="nebentext">Etwa einmal pro Woche im Online-Banking die Umsätze als CSV exportieren und unter „Konto“ hineinziehen. Zahlungen mit Rechnungsnummer werden automatisch zugeordnet, unsichere Fälle erscheinen unter „Zu erledigen“.</div></div></li>
+    <li><span class="symbol blau">{{ symbol('liste') }}</span><div class="haupttext"><strong>Ausgaben einordnen</strong>
+      <div class="nebentext">Unter „Konto“ jede Ausgabe einer Kategorie zuordnen. Mit „Immer so einordnen“ merkt sich das Programm wiederkehrende Absender, z. B. Telefon oder Bahn.</div></div></li>
+    <li><span class="symbol blau">{{ symbol('auswertung') }}</span><div class="haupttext"><strong>Zum Jahresende</strong>
+      <div class="nebentext">Unter „Auswertung“ stehen Einnahmen und Ausgaben des Jahres. Die CSV-Datei ist für Steuerberatung oder die Einnahmen-Überschuss-Rechnung in ELSTER gedacht.</div></div></li>
+  </ul>
+</div>
+
+<h2>Häufige Fragen</h2>
+<div class="karte ohne-rand fragen">
+  <details><summary>Wo sind meine Daten, und wer kann sie sehen?</summary>
+    <div>Nur auf diesem Rechner, im Ordner „Arbeits-Assistent“ in Ihrem Benutzerordner. Das Programm ist nicht mit dem Internet verbunden und überträgt nichts. Die Seite ist nur auf diesem Rechner erreichbar.</div></details>
+  <details><summary>Wie sichere ich meine Daten?</summary>
+    <div>Time Machine sichert den Ordner automatisch mit, am besten auf eine verschlüsselte externe Festplatte. Unter Einstellungen → „Ordner öffnen“ sehen Sie, was gesichert wird.</div></details>
+  <details><summary>Ich habe mich in einer ausgestellten Rechnung vertan.</summary>
+    <div>Ausgestellte Rechnungen werden nicht überschrieben, das verlangen die Regeln für ordentliche Buchführung. Stattdessen öffnen Sie die Rechnung und wählen „Korrigieren → Rechnung berichtigen“. Sie bekommen das Formular mit allen bisherigen Angaben und ändern, was nicht stimmt, etwa Aktenzeichen, Anschrift, Datum oder Betrag. Daraus entsteht eine <strong>Rechnungskorrektur</strong> mit neuer Nummer, die ausdrücklich auf die alte Rechnung verweist und sie ersetzt. Schicken Sie dem Kunden die Korrektur. Die alte Rechnung bleibt unverändert im Archiv und ist als „Berichtigt“ markiert. Schon eingegangene Zahlungen werden übernommen, die Korrektur fordert nur noch den Rest an. Soll die Rechnung ganz entfallen, wählen Sie stattdessen „Rechnung stornieren“.</div></details>
+  <details><summary>Was ist eine E-Rechnung, und brauche ich das?</summary>
+    <div>Jedes Rechnungs-PDF aus diesem Programm ist zugleich eine E-Rechnung nach ZUGFeRD (Profil EN 16931): Die Rechnungsdaten stecken zusätzlich maschinenlesbar im PDF. Menschen sehen die gewohnte Rechnung, Buchhaltungsprogramme von Kunden lesen die Daten automatisch aus. Steuerfreie Leistungen nach § 4 Nr. 16 UStG und Rechnungen an Privatpersonen brauchen keine E-Rechnung, es schadet aber nicht. Rechnungen an Firmen und Behörden sind damit auch für die Pflicht ab 2027/2028 vorbereitet. Ein Kunde, der ausdrücklich XRechnung verlangt (manche Behörden), braucht ein anderes Format. Das bitte melden.</div></details>
+  <details><summary>Kann ich mein bisheriges Format der Rechnungsnummer weiterführen?</summary>
+    <div>Ja. Unter Einstellungen → Rechnungen tragen Sie das Format ein, zum Beispiel „JJJJ-MM-NNN“ für 2026-09-147 (JJJJ = Jahr, MM = Monat, NNN = laufende Nummer). Wählen Sie, ob die laufende Nummer jedes Jahr, jeden Monat oder nie neu beginnt, und tragen Sie als erste laufende Nummer die nächste nach Ihrer letzten Word-Rechnung ein. Darunter steht, welche Nummer die nächste Rechnung bekommt.</div></details>
+  <details><summary>Wie kommt meine Unterschrift auf die Rechnung?</summary>
+    <div>Mit dunklem Stift auf weißem Papier unterschreiben, mit dem iPhone fotografieren (oder scannen) und das Bild unter Einstellungen → Unterschrift hochladen. Das Programm macht den Hintergrund weiß und schneidet die Unterschrift zu. Sie steht dann auf jeder neuen Rechnung über Ihrem Namen. Gefällt sie Ihnen nicht, laden Sie einfach ein neues Foto hoch.</div></details>
+  <details><summary>Wie wähle ich eine meiner festen Leistungen aus?</summary>
+    <div>Beim Schreiben einer Rechnung hat jede Zeile die Auswahl „Leistung wählen …“. Sie füllt Text, Einheit und Preis aus. Darunter können Sie eine Erläuterung eintragen, etwa „Sitzung des Ausschusses für Soziales“. Feste Leistungen legen Sie unter Einstellungen → Leistungen und Preise an. Für etwas Einmaliges wählen Sie „Andere Leistung (selbst eintragen)“.</div></details>
+  <details><summary>Wie viel habe ich dieses Jahr eingenommen?</summary>
+    <div>Das steht oben im Reiter „Konto“. Mit „Einnahmen im Detail“ sehen Sie die Monate, die Kunden, den Vergleich zum Vorjahr und was noch offen ist. Gezählt wird, was tatsächlich eingegangen ist: bezahlte Rechnungen und Buchungen, die Sie als Einnahme eingeordnet haben.</div></details>
+  <details><summary>Kann ich die Schrift der Rechnungen ändern?</summary>
+    <div>Ja, unter Einstellungen → Rechnungen → „Schrift auf Rechnungen“: Noto Sans (wie bisher) oder Arial. Mit „Probe ansehen“ sehen Sie vorher eine Musterrechnung. Bereits ausgestellte Rechnungen bleiben, wie sie sind.</div></details>
+  <details><summary>Wie trage ich Rechnungen von vor dem Programm nach?</summary>
+    <div>Unter Rechnungen → „Alte Rechnung nachtragen“. Am einfachsten die alte Rechnung als PDF auswählen und „Auslesen“ klicken: Die KI auf diesem Mac füllt Nummer, Datum, Kunde und Betrag vor, Sie prüfen und speichern. Ohne PDF tragen Sie die Angaben von Hand ein. Ist sie noch nicht bezahlt, erscheint sie bei den offenen Rechnungen, und die Zahlung wird beim Einlesen des Kontoauszugs zugeordnet.</div></details>
+  <details><summary>Wo stelle ich Schlusstext und Grußformel ein?</summary>
+    <div>Unter Einstellungen → Rechnungen: „Text am Ende“ (z. B. „Vielen Dank für Ihr Vertrauen.“) und „Grußformel vor der Unterschrift“ (z. B. „Viele Grüße“). Bei einer einzelnen Rechnung lässt sich der Schlusstext unter „Weitere Angaben“ ändern.</div></details>
+  <details><summary>Ein Kunde hat nur einen Teil bezahlt.</summary>
+    <div>Das Programm bucht die Teilzahlung und zeigt den Rest weiter als offen. Bei Bedarf erstellt es eine Zahlungserinnerung über den offenen Betrag.</div></details>
+  <details><summary>Eine Zahlung wurde falsch zugeordnet.</summary>
+    <div>In der Rechnung bei der Zahlung auf das ✕ klicken. Die Buchung ist danach wieder unter „Konto“ einzuordnen.</div></details>
+  <details><summary>Welche Umsatzsteuer gilt für mich?</summary>
+    <div>Leistungen von Gebärdensprachdolmetschern können nach § 4 Nr. 16 UStG steuerfrei sein, zum Beispiel in der Eingliederungshilfe. Für andere Aufträge gilt die Kleinunternehmerregelung oder 19 %. Der Fall lässt sich pro Kunde einstellen. Bitte einmal mit Steuerberatung oder Finanzamt klären.</div></details>
+  <details><summary>Was macht die KI mit meinen Mails?</summary>
+    <div>Sie liest neue Mails auf diesem Mac und erkennt Aufträge, Absagen, Rückfragen zu Rechnungen, angekündigte Zahlungen und Fristen. Daraus entstehen Hinweise unter „Zu erledigen“, etwa „Einsatz am 14.10. abrechnen“ mit einem Knopf, der einen passenden Rechnungsentwurf vorbereitet. Die KI ändert nie eine Rechnung und schickt nichts ins Internet. Das Postfach selbst wird nur gelesen, nichts wird gelöscht oder als gelesen markiert.</div></details>
+  <details><summary>Die KI hat sich geirrt.</summary>
+    <div>Hinweise lassen sich mit „Ausblenden“ oder „Erledigt“ entfernen. In der Mail selbst können Sie „Neu auswerten“ wählen. Da die KI nur Vorschläge macht, entsteht durch einen Irrtum keine falsche Buchung.</div></details>
+  <details><summary>Welche Banken werden unterstützt?</summary>
+    <div>Die CSV-Exporte der gängigen Banken, unter anderem Sparkasse, Volksbanken, ING, DKB, comdirect, Postbank, Deutsche Bank, Commerzbank, N26 und Revolut. Erkennt das Programm eine Datei nicht, sagt es, was zu tun ist.</div></details>
+</div>
+{% endblock %}

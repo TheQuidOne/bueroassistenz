@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+{% block titel %}{{ 'Rechnung ' ~ berichtigung.nummer ~ ' berichtigen' if berichtigung else ('Entwurf bearbeiten' if rechnung_id else 'Neue Rechnung') }}{% endblock %}
+{% block inhalt %}
+<header class="seitenkopf">
+  <div>
+    {% if berichtigung %}
+    <a class="leise klein" href="{{ url_for('rechnung_ansehen', rechnung_id=berichtigung.id) }}">← Rechnung {{ berichtigung.nummer }}</a>
+    <h1 style="margin-top: 6px">Rechnung {{ berichtigung.nummer }} berichtigen</h1>
+    <p class="untertitel">Korrigieren Sie, was nicht stimmt. Daraus entsteht eine Rechnungskorrektur mit neuer Nummer, die ausdrücklich auf Rechnung {{ berichtigung.nummer }} verweist und sie ersetzt. Die alte Rechnung bleibt unverändert im Archiv, bisherige Zahlungen werden übernommen.</p>
+    {% else %}
+    <h1>{{ 'Entwurf bearbeiten' if rechnung_id else 'Neue Rechnung' }}</h1>
+    <p class="untertitel">Erst ein Entwurf. Die Nummer bekommt die Rechnung beim Ausstellen.</p>
+    {% endif %}
+  </div>
+</header>
+
+<form method="post" id="rechnung">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  {% if daten.hinweis_id %}<input type="hidden" name="hinweis_id" value="{{ daten.hinweis_id }}">{% endif %}
+
+  <section class="karte">
+    <div class="felder">
+      <div class="feld">
+        <label for="kunde_id">Kunde</label>
+        <select id="kunde_id" name="kunde_id" required data-tour="kunde-waehlen">
+          <option value="">Bitte wählen …</option>
+          {% for k in kunden %}
+          <option value="{{ k.id }}" {% if daten.kunde_id|string == k.id|string %}selected{% endif %}>{{ k.name }}</option>
+          {% endfor %}
+        </select>
+        <div class="hilfe"><a href="{{ url_for('kunde_neu', weiter=url_for('rechnung_neu')) }}">Neuen Kunden anlegen</a></div>
+      </div>
+      <div class="feld">
+        <label for="leistung_von">Leistungsdatum</label>
+        <input id="leistung_von" name="leistung_von" type="date" value="{{ daten.leistung_von }}">
+        <div class="hilfe">Kann leer bleiben, wenn bei den Positionen ein Datum steht.</div>
+      </div>
+      <div class="feld">
+        <label for="bezug">Ihr Zeichen / Aktenzeichen</label>
+        <input id="bezug" name="bezug" value="{{ daten.bezug }}" placeholder="optional">
+      </div>
+    </div>
+  </section>
+
+  <section class="karte">
+    <div class="karte-kopf"><h3>Leistungen</h3></div>
+    <datalist id="vorlagen">
+      {% for v in vorlagen %}<option value="{{ v.beschreibung }}" data-einheit="{{ v.einheit }}" data-preis="{{ v.einzelpreis|euro(false) }}"></option>{% endfor %}
+    </datalist>
+    {% set vorlagen_texte = vorlagen|map(attribute='beschreibung')|list %}
+    <div class="tabelle-huelle">
+    <table class="positionen">
+      <thead><tr><th>Datum</th><th>Leistung</th><th>Menge</th><th>Einheit</th><th>Preis (€)</th><th class="rechts">Betrag</th><th></th></tr></thead>
+      <tbody id="zeilen">
+      {% for p in daten.positionen %}
+        <tr>
+          <td><input class="p-datum" type="date" name="pos_datum" value="{{ p.datum }}" aria-label="Datum"></td>
+          <td class="p-leistung">
+            {% set aus_vorlage = p.beschreibung in vorlagen_texte %}
+            {% if vorlagen %}
+            <select class="p-vorlage" aria-label="Leistung wählen" {% if loop.first %}data-tour="position-vorlage"{% endif %}>
+              <option value="" {% if not p.beschreibung %}selected{% endif %}>Leistung wählen …</option>
+              {% for v in vorlagen %}<option value="{{ loop.index }}" data-text="{{ v.beschreibung }}" data-einheit="{{ v.einheit }}" data-preis="{{ v.einzelpreis|euro(false) }}" {% if v.beschreibung == p.beschreibung %}selected{% endif %}>{{ v.beschreibung }}{% if v.einzelpreis %} · {{ v.einzelpreis|euro }}{% if v.einheit == 'pauschal' %} pauschal{% elif v.einheit %}/{{ v.einheit }}{% endif %}{% endif %}</option>{% endfor %}
+              <option value="frei" {% if p.beschreibung and not aus_vorlage %}selected{% endif %}>Andere Leistung (selbst eintragen)</option>
+            </select>
+            {% endif %}
+            <input class="p-text" name="pos_beschreibung" list="vorlagen" value="{{ p.beschreibung }}" placeholder="Leistung, z. B. Dolmetscheinsatz" aria-label="Leistung" {% if vorlagen and (aus_vorlage or not p.beschreibung) %}hidden{% endif %} {% if loop.first %}data-tour="position-leistung"{% endif %}>
+            <textarea class="p-erlaeuterung" name="pos_erlaeuterung" rows="1" placeholder="Erläuterung (optional)" title="Zum Beispiel: Sitzung des Ausschusses für Soziales" aria-label="Erläuterung zur Leistung">{{ p.erlaeuterung }}</textarea>
+          </td>
+          <td><input class="p-menge" name="pos_menge" inputmode="decimal" value="{{ p.menge }}" aria-label="Menge"></td>
+          <td><input class="p-einheit" name="pos_einheit" value="{{ p.einheit }}" placeholder="Std." aria-label="Einheit"></td>
+          <td><input class="p-preis" name="pos_preis" inputmode="decimal" value="{{ p.einzelpreis }}" aria-label="Preis" {% if loop.first %}data-tour="position-preis"{% endif %}></td>
+          <td class="p-summe zahl">–</td>
+          <td><button type="button" class="zart klein-knopf entfernen" title="Zeile entfernen" aria-label="Zeile entfernen">{{ symbol('x') }}</button></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    <button type="button" id="zeile-neu" class="zart" style="margin-top: 8px">{{ symbol('plus') }}Weitere Leistung</button>
+    {% if not vorlagen %}<p class="hilfe">Tipp: Unter <a href="{{ url_for('einstellungen') }}#vorlagen">Einstellungen</a> Leistungen mit festen Preisen anlegen, dann füllen sich Einheit und Preis von selbst.</p>{% endif %}
+  </section>
+
+  <details class="mehr" {% if daten.steuerfall or daten.zahlungsziel or daten.einleitung or daten.schluss or daten.leistung_bis %}open{% endif %}>
+    <summary>{{ symbol('pfeil') }}Weitere Angaben <span class="leise" style="font-weight: 400">· Umsatzsteuer, Zahlungsziel, Zeitraum, Texte</span></summary>
+    <div class="innen">
+      <div class="felder">
+        <div class="feld">
+          <label for="steuerfall">Umsatzsteuer</label>
+          <select id="steuerfall" name="steuerfall">
+            <option value="">Wie beim Kunden hinterlegt</option>
+            {% for schluessel, text in STEUERFAELLE.items() %}
+            <option value="{{ schluessel }}" {% if daten.steuerfall == schluessel %}selected{% endif %}>{{ text }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="feld">
+          <label for="zahlungsziel">Zahlungsziel (Tage)</label>
+          <input id="zahlungsziel" name="zahlungsziel" inputmode="numeric" placeholder="wie beim Kunden, sonst {{ einst.zahlungsziel }}" value="{{ daten.zahlungsziel }}">
+        </div>
+        <div class="feld">
+          <label for="leistung_bis">Leistung bis (bei Zeitraum)</label>
+          <input id="leistung_bis" name="leistung_bis" type="date" value="{{ daten.leistung_bis }}">
+        </div>
+      </div>
+      <div class="feld">
+        <label for="einleitung">Text vor den Leistungen</label>
+        <textarea id="einleitung" name="einleitung" placeholder="Für meine Leistungen erlaube ich mir, wie folgt abzurechnen:">{{ daten.einleitung }}</textarea>
+      </div>
+      <div class="feld">
+        <label for="zusatztext">Zusatztext unter dem Betrag</label>
+        <textarea id="zusatztext" name="zusatztext" placeholder="z. B. Grundlage des Honorars">{{ daten.zusatztext }}</textarea>
+        <div class="hilfe">Vorgabe aus den Einstellungen. Leer lassen, wenn er auf dieser Rechnung nicht stehen soll.</div>
+      </div>
+      <div class="feld" style="margin-bottom: 0">
+        <label for="schluss">Text am Ende</label>
+        <textarea id="schluss" name="schluss" placeholder="{{ einst.schluss or 'Vielen Dank für die Zusammenarbeit.' }}">{{ daten.schluss }}</textarea>
+        <div class="hilfe">Leer lassen für den Text aus den Einstellungen.</div>
+      </div>
+    </div>
+  </details>
+
+  <div class="fussleiste">
+    <div><span class="leise klein">Summe netto</span><div class="summe" id="summe">0,00 €</div></div>
+    <div class="knoepfe">
+      {% if berichtigung %}
+      <a class="knopf zart" href="{{ url_for('rechnung_ansehen', rechnung_id=berichtigung.id) }}">Abbrechen</a>
+      <button class="haupt" data-tour="korrektur-ausstellen" onclick="return confirm('Rechnungskorrektur jetzt ausstellen?\n\nSie bekommt eine neue Nummer und ersetzt Rechnung {{ berichtigung.nummer }}.')">Rechnungskorrektur ausstellen</button>
+      {% else %}
+      <a class="knopf zart" href="{{ url_for('rechnung_ansehen', rechnung_id=rechnung_id) if rechnung_id else url_for('rechnungsliste') }}">Abbrechen</a>
+      <button class="haupt" data-tour="entwurf-speichern">Entwurf speichern</button>
+      {% endif %}
+    </div>
+  </div>
+</form>
+
+<script>
+(function () {
+  const zeilen = document.getElementById("zeilen");
+  const vorlagen = Array.from(document.querySelectorAll("#vorlagen option"));
+
+  function zahl(text) {
+    text = (text || "").trim().replace(/\s/g, "");
+    if (!text) return NaN;
+    if (text.includes(",")) text = text.replace(/\./g, "").replace(",", ".");
+    return Number(text);
+  }
+  function euro(wert) {
+    return wert.toLocaleString("de-DE", { style: "currency", currency: "EUR" });
+  }
+  function rechnen() {
+    let summe = 0;
+    for (const tr of zeilen.rows) {
+      const menge = zahl(tr.querySelector("[name=pos_menge]").value || "1");
+      const preis = zahl(tr.querySelector("[name=pos_preis]").value);
+      const zelle = tr.querySelector(".p-summe");
+      if (isNaN(menge) || isNaN(preis)) { zelle.textContent = "–"; continue; }
+      const betrag = Math.round(menge * preis * 100) / 100;
+      summe += betrag;
+      zelle.textContent = euro(betrag);
+    }
+    document.getElementById("summe").textContent = euro(summe);
+  }
+  function vorlageWaehlen(auswahl) {
+    const tr = auswahl.closest("tr");
+    const text = tr.querySelector("[name=pos_beschreibung]");
+    const o = auswahl.selectedOptions[0];
+    if (auswahl.value === "frei") {
+      // Text einer Vorlage nicht stehen lassen, eigener Text bleibt
+      if (vorlagen.some(v => v.value === text.value)) text.value = "";
+      text.hidden = false;
+      text.focus();
+      return;
+    }
+    text.hidden = true;
+    text.value = o.dataset.text || "";
+    if (o.dataset.text) {
+      tr.querySelector("[name=pos_einheit]").value = o.dataset.einheit;
+      tr.querySelector("[name=pos_preis]").value = o.dataset.preis;
+    }
+  }
+  function hoeheAnpassen(feld) {
+    feld.style.height = "auto";
+    feld.style.height = feld.scrollHeight + 2 + "px";
+  }
+  function zeileLeeren(tr) {
+    tr.querySelectorAll("input, textarea").forEach(i => { i.value = i.name === "pos_menge" ? "1" : ""; });
+    const auswahl = tr.querySelector(".p-vorlage");
+    if (auswahl) {
+      auswahl.value = "";
+      tr.querySelector("[name=pos_beschreibung]").hidden = true;
+    }
+    tr.querySelectorAll(".p-erlaeuterung").forEach(hoeheAnpassen);
+  }
+  function vorlageAnwenden(eingabe) {
+    const v = vorlagen.find(o => o.value === eingabe.value);
+    if (!v) return;
+    const tr = eingabe.closest("tr");
+    const einheit = tr.querySelector("[name=pos_einheit]");
+    const preis = tr.querySelector("[name=pos_preis]");
+    if (!einheit.value) einheit.value = v.dataset.einheit;
+    if (!preis.value) preis.value = v.dataset.preis;
+  }
+  document.getElementById("zeile-neu").addEventListener("click", () => {
+    const vorlage = zeilen.rows[zeilen.rows.length - 1];
+    const neu = vorlage.cloneNode(true);
+    neu.querySelectorAll("[data-tour]").forEach(i => i.removeAttribute("data-tour"));
+    zeileLeeren(neu);
+    neu.querySelector("[name=pos_datum]").value = vorlage.querySelector("[name=pos_datum]").value;
+    zeilen.appendChild(neu);
+    (neu.querySelector(".p-vorlage") || neu.querySelector("[name=pos_beschreibung]")).focus();
+    rechnen();
+  });
+  zeilen.addEventListener("click", e => {
+    const knopf = e.target.closest(".entfernen");
+    if (!knopf) return;
+    const tr = knopf.closest("tr");
+    if (zeilen.rows.length > 1) tr.remove();
+    else zeileLeeren(tr);
+    rechnen();
+  });
+  zeilen.addEventListener("input", e => {
+    if (e.target.name === "pos_beschreibung") vorlageAnwenden(e.target);
+    if (e.target.classList.contains("p-erlaeuterung")) hoeheAnpassen(e.target);
+    rechnen();
+  });
+  zeilen.addEventListener("change", e => {
+    if (e.target.classList.contains("p-vorlage")) { vorlageWaehlen(e.target); rechnen(); }
+  });
+  zeilen.querySelectorAll(".p-erlaeuterung").forEach(hoeheAnpassen);
+  rechnen();
+})();
+</script>
+{% endblock %}

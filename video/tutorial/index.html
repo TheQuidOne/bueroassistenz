@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Arbeits-Assistent – Tutorial</title>
+    <script src="assets/vendor/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Inter"; src: url("assets/fonts/inter-400.ttf") format("truetype"); font-weight: 400; }
+      @font-face { font-family: "Inter"; src: url("assets/fonts/inter-500.ttf") format("truetype"); font-weight: 500; }
+      @font-face { font-family: "Inter"; src: url("assets/fonts/inter-600.ttf") format("truetype"); font-weight: 600; }
+      @font-face { font-family: "Inter"; src: url("assets/fonts/inter-700.ttf") format("truetype"); font-weight: 700; }
+
+      /* Eine Akzentfarbe (Blau der neuen Oberfläche), sonst neutral und hell */
+      :root {
+        --grund: #f3f4f6;
+        --tinte: #111827;
+        --leise: #4b5563;
+        --linie: #e5e7eb;
+        --akzent: #2451c7;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--grund); }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--grund); color: var(--tinte); font-family: "Inter", sans-serif; -webkit-font-smoothing: antialiased; }
+      .clip { position: absolute; inset: 0; overflow: hidden; }
+
+      /* --- Browserfenster mit Screenshot ------------------------------------------------- */
+      .fenster { position: absolute; left: 0; top: 0; width: 1920px; height: 1136px; transform-origin: 0 0; border-radius: 20px; overflow: hidden; background: #fff;
+        box-shadow: 0 40px 100px rgba(17, 24, 39, 0.16), 0 6px 18px rgba(17, 24, 39, 0.08), 0 0 0 1.5px rgba(17, 24, 39, 0.07); }
+      .fenster .leiste { position: absolute; left: 0; top: 0; width: 1920px; height: 56px; background: #f6f6f7; border-bottom: 1px solid #e3e4e8; z-index: 2; }
+      .leiste .punkt { position: absolute; top: 20px; width: 16px; height: 16px; border-radius: 50%; }
+      .leiste .adresse { position: absolute; left: 660px; top: 12px; width: 600px; height: 32px; border-radius: 9px; background: #e9e9ec; font: 500 19px/32px "Inter", sans-serif; color: #3e4652; text-align: center; letter-spacing: 0.01em; }
+      .fenster .ansicht { position: absolute; left: 0; top: 56px; width: 1920px; height: 1080px; overflow: hidden; background: #fff; z-index: 1; }
+      .ansicht img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+      .licht { position: absolute; left: 0; top: 0; border-radius: 12px; border: 3px solid var(--akzent); z-index: 5;
+        box-shadow: 0 0 0 7px rgba(36, 81, 199, 0.16), 0 0 0 4000px rgba(17, 24, 39, 0.26); }
+      .zeiger { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 10; }
+      .zeiger svg { position: absolute; left: -3px; top: -3px; width: 30px; height: 43px; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.28)); }
+      .puls { position: absolute; left: 0; top: 0; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%; border: 4px solid var(--akzent); background: rgba(36, 81, 199, 0.14); z-index: 9; }
+      .datei { position: absolute; left: 0; top: 0; z-index: 9; display: flex; align-items: center; gap: 14px; padding: 14px 22px 14px 14px; border-radius: 14px; background: #fff;
+        box-shadow: 0 14px 34px rgba(17, 24, 39, 0.22), 0 0 0 1px rgba(17, 24, 39, 0.08); font: 600 24px "Inter", sans-serif; color: var(--tinte); white-space: nowrap; }
+      .datei .symbol { width: 44px; height: 54px; border-radius: 6px; background: #1f7a44; color: #fff; font: 700 13px/54px "Inter", sans-serif; text-align: center; letter-spacing: 0.04em; }
+
+      /* --- Textleiste und Kapitelmarke --------------------------------------------------- */
+      .textplatz { position: absolute; left: 0; bottom: 38px; width: 1920px; display: flex; justify-content: center; z-index: 20; }
+      .karte { max-width: 1580px; padding: 20px 44px 23px; border-radius: 24px; background: rgba(255, 255, 255, 0.97); text-align: center;
+        box-shadow: 0 16px 44px rgba(17, 24, 39, 0.14), 0 0 0 1px rgba(17, 24, 39, 0.05); font: 600 46px/1.28 "Inter", sans-serif; letter-spacing: -0.012em; color: var(--tinte); }
+      .karte .z { display: block; }
+      .marke { position: absolute; left: 40px; top: 26px; z-index: 20; display: flex; align-items: center; gap: 14px; height: 50px; padding: 0 24px 0 8px; border-radius: 999px;
+        background: rgba(255, 255, 255, 0.96); box-shadow: 0 6px 20px rgba(17, 24, 39, 0.1), 0 0 0 1px rgba(17, 24, 39, 0.05); font: 600 24px/50px "Inter", sans-serif; color: var(--tinte); white-space: nowrap; }
+      .marke .nr { width: 36px; height: 36px; border-radius: 50%; background: var(--akzent); color: #fff; font: 700 19px/36px "Inter", sans-serif; text-align: center; }
+
+      /* --- Blatt (PDF) -------------------------------------------------------------------- */
+      .schleier { position: absolute; inset: 0; background: rgba(17, 24, 39, 0.4); z-index: 12; }
+      .blatt { position: absolute; left: 0; top: 0; transform-origin: 0 0; background: #fff; border-radius: 8px; overflow: hidden; z-index: 13; box-shadow: 0 40px 120px rgba(0, 0, 0, 0.3); }
+      .blatt img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+      .blatt .ring { position: absolute; border: 10px solid var(--akzent); border-radius: 28px; box-shadow: 0 0 0 18px rgba(36, 81, 199, 0.16); }
+
+      /* --- Kapitelkarte, Titel, Abspann --------------------------------------------------- */
+      .mitte { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+      .k-nr { font: 600 28px "Inter", sans-serif; letter-spacing: 0.16em; text-transform: uppercase; color: var(--akzent); }
+      .k-titel { margin-top: 18px; font: 700 96px/1.05 "Inter", sans-serif; letter-spacing: -0.035em; }
+      .k-punkte { margin-top: 44px; display: flex; gap: 14px; }
+      .k-punkte span { display: block; width: 14px; height: 14px; border-radius: 50%; background: #d1d5db; }
+      .k-punkte span.an { background: var(--akzent); }
+      .symbol-app { width: 120px; height: 120px; border-radius: 30px; background: var(--akzent); color: #fff; font: 700 70px/120px "Inter", sans-serif; text-align: center;
+        box-shadow: 0 18px 40px rgba(36, 81, 199, 0.28); }
+      .t-titel { margin-top: 34px; font: 700 124px/1 "Inter", sans-serif; letter-spacing: -0.04em; }
+      .t-zeile { margin-top: 22px; font: 500 46px/1.3 "Inter", sans-serif; letter-spacing: -0.012em; color: var(--leise); }
+      .titel-kopf { position: absolute; left: 0; top: 70px; width: 1920px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+      .titel-kopf .symbol-app { width: 96px; height: 96px; border-radius: 24px; font-size: 56px; line-height: 96px; }
+      .titel-kopf .t-titel { margin-top: 26px; font-size: 112px; }
+      .titel-kopf .t-zeile + .t-zeile { margin-top: 2px; }
+      /* --- Ordner und Sicherung (Kapitel 8) ------------------------------------------------- */
+      .ordner-buehne { position: absolute; left: 0; top: 0; width: 1920px; height: 930px; display: flex; align-items: center; justify-content: center; gap: 48px; }
+      .finder { width: 940px; border-radius: 20px; background: #fff; overflow: hidden;
+        box-shadow: 0 40px 100px rgba(17, 24, 39, 0.16), 0 6px 18px rgba(17, 24, 39, 0.08), 0 0 0 1.5px rgba(17, 24, 39, 0.07); }
+      .finder-kopf { position: relative; height: 64px; background: #f6f6f7; border-bottom: 1px solid #e3e4e8; display: flex; align-items: center; padding-left: 24px; gap: 10px; }
+      .finder-kopf .punkt { position: static; display: block; width: 16px; height: 16px; border-radius: 50%; }
+      .finder-titel { position: absolute; left: 0; right: 0; top: 0; height: 64px; display: flex; align-items: center; justify-content: center; gap: 12px; font: 600 24px "Inter", sans-serif; color: var(--tinte); }
+      .symbol-klein { display: block; width: 32px; height: 26px; }
+      .symbol-klein svg, .symbol-zeile svg, .sicherung-symbol svg, .ordner-pfeil svg { display: block; width: 100%; height: 100%; }
+      .finder-zeile { display: flex; align-items: center; gap: 28px; padding: 26px 40px; border-bottom: 1px solid #eef0f3; }
+      .finder-zeile:last-child { border-bottom: 0; }
+      .symbol-zeile { display: block; width: 68px; height: 58px; flex: none; }
+      .finder-name { font: 600 36px "Inter", sans-serif; color: var(--tinte); }
+      .finder-info { margin-top: 4px; font: 500 27px "Inter", sans-serif; color: var(--leise); }
+      .ordner-pfeil { width: 220px; height: 40px; flex: none; }
+      .sicherung { width: 300px; display: flex; flex-direction: column; align-items: center; text-align: center; flex: none; }
+      .sicherung-symbol { width: 220px; height: 220px; padding: 30px; border-radius: 44px; background: #fff;
+        box-shadow: 0 24px 60px rgba(17, 24, 39, 0.14), 0 0 0 1.5px rgba(17, 24, 39, 0.06); }
+      .sicherung-name { margin-top: 30px; font: 700 40px "Inter", sans-serif; color: var(--tinte); }
+      .sicherung-info { margin-top: 6px; font: 500 28px "Inter", sans-serif; color: var(--leise); }
+      /* --- Ablauf (Kapitel 7: Mail → KI → Hinweis → Entwurf) ---------------------------------- */
+      .ablauf-buehne { position: absolute; left: 0; top: 0; width: 1920px; height: 930px; display: flex; align-items: center; justify-content: center; gap: 22px; }
+      .station { width: 340px; height: 360px; padding: 40px 24px 30px; border-radius: 26px; background: #fff; display: flex; flex-direction: column; align-items: center; text-align: center; flex: none;
+        box-shadow: 0 24px 60px rgba(17, 24, 39, 0.12), 0 0 0 1.5px rgba(17, 24, 39, 0.06); }
+      .station.betont { background: #eef3ff; box-shadow: 0 24px 60px rgba(36, 81, 199, 0.18), 0 0 0 3px var(--akzent); }
+      .station-symbol { width: 112px; height: 112px; padding: 26px; flex: none; border-radius: 28px; background: #f3f4f6; color: var(--tinte); }
+      .station.betont .station-symbol { background: var(--akzent); color: #fff; }
+      .station-symbol svg { display: block; width: 100%; height: 100%; }
+      .station-titel { margin-top: 26px; font: 700 36px/1.15 "Inter", sans-serif; color: var(--tinte); letter-spacing: -0.015em; }
+      .station-text { margin-top: 10px; font: 500 26px/1.3 "Inter", sans-serif; color: var(--leise); display: flex; align-items: center; justify-content: center; gap: 8px; }
+      .station.betont .station-text { color: var(--akzent); font-weight: 600; }
+      .station-schloss { display: block; width: 24px; height: 24px; flex: none; }
+      .station-schloss svg { display: block; width: 100%; height: 100%; }
+      .station-schild { margin-top: 14px; display: inline-flex; align-items: center; gap: 6px; padding: 4px 14px 4px 10px; border-radius: 999px; background: #e3ebff; color: var(--akzent); font: 600 22px "Inter", sans-serif; }
+      .station-schild svg { display: block; width: 20px; height: 20px; }
+      .ablauf-pfeil { width: 90px; height: 30px; flex: none; }
+      .ablauf-pfeil svg { display: block; width: 100%; height: 100%; }
+      .a-zeile { margin-top: 20px; font: 500 40px/1.35 "Inter", sans-serif; color: var(--leise); }
+      .a-hinweis { margin-top: 56px; font: 600 34px "Inter", sans-serif; color: var(--tinte); }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="1920" data-height="1080" data-duration="170.6"></div>
+
+    <script src="assets/aufnahmen/ziele.js"></script>
+    <script src="szenen.js"></script>
+    <script src="assets/bausteine.js"></script>
+    <script>
+      window.__timelines["main"] = Tutorial.bauen(window.DREHBUCH, document.getElementById("root"));
+    </script>
+  </body>
+</html>

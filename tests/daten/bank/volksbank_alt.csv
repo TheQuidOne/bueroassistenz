@@ -1,0 +1,23 @@
+"Volksbank Musterstadt eG"
+
+"Umsatzanzeige"
+
+"BLZ:";"12345678";;"Datum:";"31.03.2026"
+"Konto:";"1234567";;"Uhrzeit:";"11:23:33"
+"Abfrage von:";"Max Mustermann";;"Kontoinhaber:";"Max Mustermann"
+
+"Zeitraum:";;"von:";"01.03.2026";"bis:";
+"Betrag in EUR:";;"von:";" ";"bis:";" "
+"Sortiert nach:";"Buchungstag";"absteigend"
+
+"Buchungstag";"Valuta";"Auftraggeber/Zahlungsempfänger";"Empfänger/Zahlungspflichtiger";"Konto-Nr.";"IBAN";"BLZ";"BIC";"Vorgang/Verwendungszweck";"Kundenreferenz";"Währung";"Umsatz";" "
+"20.03.2026";"20.03.2026";"Max Mustermann";"Stadt Musterstadt";;"DE02500105170137075030";;"MUSTDEFFXXX";"ÜBERWEISUNG
+RE 2026-005 Dolmetschen Elterng
+espräch";;"EUR";"1.202,10";"H"
+"12.03.2026";"12.03.2026";"Max Mustermann";"Bäckerei Muster";;"DE02370502990000684712";;"BEISDEFFXXX";"LASTSCHRIFT
+Einkauf 11.03.";;"EUR";"4,50";"S"
+"01.03.2026";"01.03.2026";"Max Mustermann";"Erika Mustermann";;"DE02200505501015871393";;"TESTDEFFXXX";"GUTSCHRIFT
+Rechnung 2026 001";;"EUR";"95,20";"H"
+
+"01.03.2026";;;;;;;;;"Anfangssaldo";"EUR";"2.257,11";"H"
+"31.03.2026";;;;;;;;;"Endsaldo";"EUR";"3.549,91";"H"

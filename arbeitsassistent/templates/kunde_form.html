@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block titel %}{{ 'Kunde bearbeiten' if kunde_id else 'Neuer Kunde' }}{% endblock %}
+{% block inhalt %}
+<header class="seitenkopf">
+  <div>
+    <a class="leise klein" href="{{ url_for('kundenliste') }}">← Alle Kunden</a>
+    <h1 style="margin-top: 6px">{{ 'Kunde bearbeiten' if kunde_id else 'Neuer Kunde' }}</h1>
+  </div>
+</header>
+<form method="post" class="karte">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <input type="hidden" name="weiter" value="{{ weiter or request.form.get('weiter', '') }}">
+  <div class="formular-abschnitt">
+    <div><h3>Anschrift</h3><p>So steht der Kunde im Adressfeld der Rechnung.</p></div>
+    <div>
+      <div class="feld">
+        <label for="name">Name</label>
+        <input id="name" name="name" required value="{{ k.name or '' }}" placeholder="z. B. Landschaftsverband … – Integrationsamt" autofocus>
+      </div>
+      <div class="feld" style="margin-bottom: 0">
+        <label for="anschrift">Weitere Zeilen</label>
+        <textarea id="anschrift" name="anschrift" placeholder="Abteilung&#10;Straße Nr.&#10;PLZ Ort">{{ k.anschrift or '' }}</textarea>
+      </div>
+    </div>
+  </div>
+  <div class="formular-abschnitt">
+    <div><h3>Abrechnung</h3><p>Gilt für alle Rechnungen an diesen Kunden, solange in der Rechnung nichts anderes gewählt ist.</p></div>
+    <div class="felder">
+      <div class="feld">
+        <label for="steuerfall">Umsatzsteuer</label>
+        <select id="steuerfall" name="steuerfall">
+          <option value="">Standard aus den Einstellungen</option>
+          {% for schluessel, text in STEUERFAELLE.items() %}
+          <option value="{{ schluessel }}" {% if k.steuerfall == schluessel %}selected{% endif %}>{{ text }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="feld">
+        <label for="zahlungsziel">Zahlungsziel (Tage)</label>
+        <input id="zahlungsziel" name="zahlungsziel" inputmode="numeric" placeholder="Standard" value="{{ k.zahlungsziel if k.zahlungsziel is not none else '' }}">
+      </div>
+    </div>
+  </div>
+  <div class="formular-abschnitt">
+    <div><h3>Sonstiges</h3><p>Steht nicht auf der Rechnung.</p></div>
+    <div>
+      <div class="feld"><label for="email">E-Mail</label><input id="email" name="email" type="email" value="{{ k.email or '' }}"></div>
+      <div class="feld" style="margin-bottom: 0"><label for="notiz">Notiz</label><textarea id="notiz" name="notiz">{{ k.notiz or '' }}</textarea></div>
+    </div>
+  </div>
+  <div class="knoepfe" style="justify-content: flex-end; border-top: 1px solid var(--linie); padding-top: 18px">
+    <a class="knopf zart" href="{{ url_for('kundenliste') }}">Abbrechen</a>
+    <button class="haupt" data-tour="kunde-speichern">Speichern</button>
+  </div>
+</form>
+{% endblock %}

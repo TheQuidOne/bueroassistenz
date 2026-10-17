@@ -1,0 +1,19 @@
+
+"Umsätze Girokonto";"Zeitraum: 30 Tage";
+"Neuer Kontostand";"3.548,71 EUR";
+
+"Buchungstag";"Wertstellung (Valuta)";"Vorgang";"Buchungstext";"Umsatz in EUR";
+"offen";"--";"Kartenverfügung";"Kto/IBAN: 1234567890  Buchungstext: BAECKEREI MUSTER MUSTERSTADT        2026-03-30T08:12:00                 ";"-3,80";
+"20.03.2026";"20.03.2026";"Übertrag / Überweisung";"Auftraggeber: Landschaftsverband MusterlandKto/IBAN: DE02300209000106531065 BLZ/BIC: MUSTDEFFXXX  Buchungstext: RE 2026-001 RE 2026-002 Ref. MUST2026032000001/1";"1.080,00";
+"12.03.2026";"12.03.2026";"Lastschrift / Belastung";"Auftraggeber: Mobilfunk Beispiel GmbH Buchungstext: Mobilfunk Rechnung 02/2026 2026-03-11T18:54:23 Ref. BEIS12345678/0815";"-29,99";
+"02.03.2026";"02.03.2026";"Übertrag / Überweisung";"Empfänger: Berufsverband Beispiel e.V.Kto/IBAN: DE02500105170137075030 BLZ/BIC: BEISDEFFXXX  Buchungstext: Mitgliedsbeitrag 2026 Ref. DE987654321/1";"-120,00";
+
+"Alter Kontostand";"2.618,70 EUR";
+
+"Umsätze Visa-Karte (Kreditkarte)";"Zeitraum: 30 Tage";
+"Neuer Kontostand";"-46,90 EUR";
+
+"Buchungstag";"Umsatztag";"Vorgang";"Referenz";"Buchungstext";"Umsatz in EUR";
+"15.03.2026";"14.03.2026";"Visa-Umsatz";"123456789";"MUSTERBAHN AG";"-46,90";
+
+"Alter Kontostand";"0,00 EUR";

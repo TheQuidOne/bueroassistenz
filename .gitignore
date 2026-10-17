@@ -1,0 +1,17 @@
+.venv
+__pycache__/
+*.pyc
+.pytest_cache/
+.claude/worktrees/
+*.tmp
+
+# Modelle und fertige Pakete sind zu groß fürs Repo
+/modelle/
+/dist/
+*.gguf
+
+# Echte Daten gehören nie ins Repo
+/daten/
+*.db
+*.egg-info/
+/build/

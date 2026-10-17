@@ -1,0 +1,4 @@
+"Datum","Empfänger","Kontonummer","Transaktionstyp","Verwendungszweck","Kategorie","Betrag (EUR)","Betrag (Fremdwährung)","Fremdwährung","Wechselkurs"
+"2023-03-02","Erika Mustermann","DE02200505501015871393","Gutschrift","RE 2023-004","Einnahmen","95.2","","",""
+"2023-03-03","Bäckerei Muster","","MasterCard Zahlung","","Lebensmittel","-4.5","","",""
+"2023-03-05","Stadt Musterstadt","DE02500105170137075030","Gutschrift","RE 2023-005","Einnahmen","1202.1","","",""

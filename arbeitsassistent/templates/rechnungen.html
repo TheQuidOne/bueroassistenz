@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block titel %}Rechnungen{% endblock %}
+{% block inhalt %}
+<header class="seitenkopf">
+  <div>
+    <h1>Rechnungen</h1>
+    <p class="untertitel">Alle Rechnungen mit Stand der Zahlung.</p>
+  </div>
+  <div class="aktionen">
+    <a class="knopf" href="{{ url_for('rechnung_nachtragen') }}" data-tour="nachtragen">{{ symbol('hochladen') }}Alte Rechnung nachtragen</a>
+    <a class="knopf haupt" href="{{ url_for('rechnung_neu') }}">{{ symbol('plus') }}Neue Rechnung</a>
+  </div>
+</header>
+
+<nav class="segmente" aria-label="Filter">
+  {% for schluessel, text in [('alle', 'Alle'), ('offen', 'Offen'), ('ueberfaellig', 'Überfällig'), ('bezahlt', 'Bezahlt'), ('entwurf', 'Entwürfe')] %}
+  <a href="{{ url_for('rechnungsliste', filter=schluessel, jahr=jahr) }}" {% if filter == schluessel %}aria-current="page"{% endif %}>{{ text }}</a>
+  {% endfor %}
+</nav>
+
+<div class="karte ohne-rand">
+  {% if liste %}
+  <div class="tabelle-huelle"><table>
+    <thead><tr><th>Nummer</th><th>Kunde</th><th>Datum</th><th>Fällig</th><th>Status</th><th class="rechts">Betrag</th></tr></thead>
+    <tbody>
+    {% for e in liste %}
+      <tr class="klickbar" data-href="{{ url_for('rechnung_ansehen', rechnung_id=e.r.id) }}">
+        <td><a href="{{ url_for('rechnung_ansehen', rechnung_id=e.r.id) }}"><strong>{{ e.r.nummer or 'Entwurf' }}</strong></a>{% if e.r.nachgetragen %}<div class="leise klein">nachgetragen</div>{% endif %}</td>
+        <td>{{ e.r.kunde_name }}</td>
+        <td class="leise">{{ e.r.datum|datum or '–' }}</td>
+        <td class="leise">{{ e.r.faellig|datum if e.r.art == 'rechnung' else '' }}</td>
+        <td><span class="pille z-{{ e.zustand }}">{{ e.zustand_text }}</span></td>
+        <td class="zahl">{{ e.r.brutto|euro }}{% if 0 < e.offen < e.r.brutto %}<div class="leise klein">offen {{ e.offen|euro }}</div>{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}
+  <div class="leer">Hier gibt es noch keine Rechnungen.<div style="margin-top: 12px"><a class="knopf haupt" href="{{ url_for('rechnung_neu') }}">{{ symbol('plus') }}Erste Rechnung schreiben</a></div></div>
+  {% endif %}
+</div>
+{% endblock %}

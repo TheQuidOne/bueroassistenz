@@ -1,0 +1,15 @@
+{# Einnahmen je Monat als Säulen. Eine Reihe in der Akzentfarbe, Werte im Tooltip und in der Tabelle daneben. #}
+{% macro monatsbalken(e, gross=false) %}
+{% set hoechster = e.monate|max or 1 %}
+<div class="balken-monate {{ 'gross' if gross }}" role="img" aria-label="Einnahmen je Monat {{ e.jahr }}">
+  {% for betrag in e.monate %}
+  <div class="balken-feld" title="{{ MONATE[loop.index0] }} {{ e.jahr }}: {{ betrag|euro }}">
+    {% if gross and loop.index0 == e.bester_monat %}<span class="balken-wert">{{ betrag|euro }}</span>{% endif %}
+    {% if betrag > 0 %}<span class="balken" style="height: {{ [100 * betrag / hoechster, 2]|max|round(1) }}%"></span>{% endif %}
+  </div>
+  {% endfor %}
+  {% for betrag in e.monate %}
+  <div class="balken-monat {{ 'zukunft' if loop.index > e.monate_bisher }}">{{ MONATE[loop.index0][:3] }}</div>
+  {% endfor %}
+</div>
+{% endmacro %}

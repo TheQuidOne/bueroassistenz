@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block titel %}Kunden{% endblock %}
+{% block inhalt %}
+<header class="seitenkopf">
+  <div>
+    <h1>Kunden</h1>
+    <p class="untertitel">Rechnungsempfänger, z. B. Integrationsamt, Krankenkasse, Firma oder Privatperson.</p>
+  </div>
+  <div class="aktionen"><a class="knopf haupt" href="{{ url_for('kunde_neu') }}" data-tour="kunde-neu">{{ symbol('plus') }}Neuer Kunde</a></div>
+</header>
+<div class="karte ohne-rand">
+  {% if kunden %}
+  <div class="tabelle-huelle"><table>
+    <thead><tr><th>Name</th><th>Umsatzsteuer</th><th class="rechts">Offen</th><th></th></tr></thead>
+    <tbody>
+    {% for k in kunden %}
+      <tr class="klickbar" data-href="{{ url_for('kunde_bearbeiten', kunde_id=k.id) }}">
+        <td><strong style="font-weight: 600">{{ k.name }}</strong><div class="leise klein">{{ k.anschrift.splitlines()|join(' · ') }}</div></td>
+        <td class="leise klein">{{ STEUERFAELLE[k.steuerfall] if k.steuerfall else 'Standard' }}</td>
+        <td class="zahl">{% if offen.get(k.id) %}{{ offen[k.id]|euro }}{% else %}<span class="leise">–</span>{% endif %}</td>
+        <td class="rechts"><a class="knopf klein-knopf" href="{{ url_for('rechnung_neu', kunde=k.id) }}">Rechnung schreiben</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}
+  <div class="leer">Noch keine Kunden.<div style="margin-top: 12px"><a class="knopf haupt" href="{{ url_for('kunde_neu') }}">{{ symbol('plus') }}Ersten Kunden anlegen</a></div></div>
+  {% endif %}
+</div>
+{% endblock %}

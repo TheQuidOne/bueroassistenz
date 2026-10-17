@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block titel %}Alte Rechnung nachtragen{% endblock %}
+{% block inhalt %}
+<header class="seitenkopf">
+  <div>
+    <a class="leise klein" href="{{ url_for('rechnungsliste') }}">← Alle Rechnungen</a>
+    <h1 style="margin-top: 6px">Alte Rechnung nachtragen</h1>
+    <p class="untertitel">Für Rechnungen, die Sie geschrieben haben, bevor es dieses Programm gab. Sie behalten ihre Nummer, zählen bei Einnahmen und offenen Posten mit, und Zahlungen aus dem Kontoauszug werden ihnen zugeordnet.</p>
+  </div>
+</header>
+
+{% if not schluessel %}
+<form method="post" action="{{ url_for('nachtrag_auslesen') }}" enctype="multipart/form-data" class="karte" id="auslesen" data-tour="nachtrag-auslesen">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="knoepfe" style="justify-content: space-between">
+    <div style="flex: 1; min-width: 260px">
+      <strong>Aus dem PDF auslesen lassen</strong> <span class="leise">(optional)</span>
+      <div class="leise klein">Die KI auf diesem Mac liest Nummer, Datum, Kunde und Betrag aus der alten Rechnung. Das dauert bis zu einer Minute. Danach prüfen Sie alles. Das PDF wird als Original mitgespeichert.</div>
+    </div>
+    <input type="file" name="datei" accept=".pdf,application/pdf" required style="width: auto; max-width: 300px">
+    <button id="auslesen-knopf">{{ symbol('funken') }}Auslesen</button>
+  </div>
+</form>
+{% endif %}
+
+{% if vorschlag.hinweis %}
+<div class="meldung {{ 'hinweis' if not vorschlag.quelle or vorschlag.quelle == 'Bild' else '' }}">{{ symbol('funken') }}<span class="text">{{ vorschlag.hinweis }}
+  {% if vorschlag.kunde_name and not daten.kunde_id %}<br>Kunde laut PDF: <strong>{{ vorschlag.kunde_name }}</strong>. Bitte unten auswählen oder <a href="{{ url_for('kunde_neu', weiter=url_for('rechnung_nachtragen')) }}">neu anlegen</a>.{% endif %}</span></div>
+{% endif %}
+
+<form method="post" action="{{ url_for('nachtrag_speichern') }}" enctype="multipart/form-data" class="karte" data-tour="nachtrag-formular">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <input type="hidden" name="schluessel" value="{{ schluessel }}">
+  <input type="hidden" name="dateiname" value="{{ dateiname }}">
+  <div class="felder">
+    <div class="feld">
+      <label for="kunde_id">Kunde</label>
+      <select id="kunde_id" name="kunde_id" required>
+        <option value="">Bitte wählen …</option>
+        {% for k in kunden %}<option value="{{ k.id }}" {% if daten.kunde_id|string == k.id|string %}selected{% endif %}>{{ k.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="feld">
+      <label for="nummer">Rechnungsnummer</label>
+      <input id="nummer" name="nummer" value="{{ daten.nummer }}" required placeholder="wie auf der Rechnung">
+    </div>
+    <div class="feld">
+      <label for="datum">Rechnungsdatum</label>
+      <input id="datum" name="datum" type="date" value="{{ daten.datum }}" required>
+    </div>
+  </div>
+  <div class="felder">
+    <div class="feld">
+      <label for="betrag">Gesamtbetrag (€)</label>
+      <input id="betrag" name="betrag" inputmode="decimal" value="{{ daten.betrag }}" required placeholder="z. B. 212,50">
+      <div class="hilfe">Der Endbetrag, den der Kunde zahlen soll.</div>
+    </div>
+    <div class="feld">
+      <label for="steuerfall">Umsatzsteuer</label>
+      <select id="steuerfall" name="steuerfall">
+        <option value="">wie beim Kunden</option>
+        {% for schluessel_, text in STEUERFAELLE.items() %}<option value="{{ schluessel_ }}" {% if daten.steuerfall == schluessel_ %}selected{% endif %}>{{ text }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="feld">
+      <label for="faellig">Zahlbar bis <span class="leise">(optional)</span></label>
+      <input id="faellig" name="faellig" type="date" value="{{ daten.faellig }}">
+      <div class="hilfe">Leer: Rechnungsdatum plus Zahlungsziel.</div>
+    </div>
+  </div>
+  <div class="felder">
+    <div class="feld">
+      <label for="leistung_von">Leistungsdatum <span class="leise">(optional)</span></label>
+      <input id="leistung_von" name="leistung_von" type="date" value="{{ daten.leistung_von }}">
+    </div>
+    <div class="feld">
+      <label for="leistung_bis">Leistung bis <span class="leise">(bei Zeitraum)</span></label>
+      <input id="leistung_bis" name="leistung_bis" type="date" value="{{ daten.leistung_bis }}">
+    </div>
+    <div class="feld">
+      <label for="bezug">Ihr Zeichen / Aktenzeichen <span class="leise">(optional)</span></label>
+      <input id="bezug" name="bezug" value="{{ daten.bezug }}">
+    </div>
+  </div>
+  <div class="feld">
+    <label for="beschreibung">Leistung <span class="leise">(optional)</span></label>
+    <input id="beschreibung" name="beschreibung" value="{{ daten.beschreibung }}" placeholder="z. B. Dolmetscheinsatz DGS">
+  </div>
+
+  <div class="feld">
+    <label>Zahlung</label>
+    <label class="ankreuzen"><input type="radio" name="bezahlt" value="nein" {% if daten.bezahlt_am is not defined or not daten.bezahlt_am %}checked{% endif %}> Noch offen</label>
+    <label class="ankreuzen"><input type="radio" name="bezahlt" value="ja" {% if daten.bezahlt_am %}checked{% endif %}> Schon bezahlt am
+      <input name="bezahlt_am" type="date" value="{{ daten.bezahlt_am }}" style="width: auto; display: inline-block; margin-left: 8px"></label>
+    <div class="hilfe">Kommt die Zahlung in einem Kontoauszug vor, den Sie noch einlesen, lassen Sie „Noch offen“ stehen. Das Programm ordnet sie dann selbst zu.</div>
+  </div>
+
+  {% if schluessel %}
+  <p class="leise klein">{{ symbol('haken') }} Original-PDF „{{ dateiname }}“ wird mitgespeichert.</p>
+  {% else %}
+  <div class="feld">
+    <label for="datei">Original-PDF <span class="leise">(optional)</span></label>
+    <input id="datei" type="file" name="datei" accept=".pdf,application/pdf" style="width: auto">
+  </div>
+  {% endif %}
+
+  <div class="knoepfe" style="justify-content: flex-end; border-top: 1px solid var(--linie); padding-top: 18px">
+    <a class="knopf zart" href="{{ url_for('rechnungsliste') }}">Abbrechen</a>
+    <button class="haupt" data-tour="nachtrag-speichern">{{ symbol('haken') }}Rechnung nachtragen</button>
+  </div>
+</form>
+
+<script>
+// Während die KI liest, zeigen, dass etwas passiert.
+const auslesen = document.getElementById("auslesen");
+if (auslesen) auslesen.addEventListener("submit", () => {
+  const knopf = document.getElementById("auslesen-knopf");
+  knopf.disabled = true;
+  knopf.textContent = "Die KI liest … (bis zu einer Minute)";
+});
+</script>
+{% endblock %}

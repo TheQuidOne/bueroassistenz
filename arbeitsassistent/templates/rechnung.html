@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block titel %}{{ 'Rechnung ' ~ r.nummer if r.nummer else 'Entwurf' }}{% endblock %}
+{% block inhalt %}
+<header class="seitenkopf">
+  <div>
+    <a class="leise klein" href="{{ url_for('rechnungsliste') }}">← Alle Rechnungen</a>
+    <h1 style="margin-top: 6px">{% if r.art == 'storno' %}Stornorechnung {{ r.nummer }}{% elif r.ersetzt and r.nummer %}Rechnungskorrektur {{ r.nummer }}{% elif r.nummer %}Rechnung {{ r.nummer }}{% else %}Rechnungsentwurf{% endif %}
+      <span class="pille z-{{ zustand }}" style="vertical-align: middle; margin-left: 6px">{{ zustand_text }}</span></h1>
+    <p class="untertitel">{{ kunde.name }}</p>
+  </div>
+  <div class="aktionen">
+    {% if r.status == 'entwurf' %}
+      <a class="knopf" href="{{ url_for('rechnung_bearbeiten', rechnung_id=r.id) }}">{{ symbol('stift') }}Bearbeiten</a>
+      <a class="knopf" href="{{ url_for('rechnung_pdf', rechnung_id=r.id) }}" target="_blank" data-tour="vorschau">{{ symbol('auge') }}Vorschau</a>
+      <form class="inline" method="post" action="{{ url_for('rechnung_ausstellen', rechnung_id=r.id) }}"
+            onsubmit="return confirm('Rechnung jetzt ausstellen?\n\nSie bekommt ihre Nummer und lässt sich danach nicht mehr ändern.')">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <button class="haupt" data-tour="ausstellen">{{ symbol('haken') }}Ausstellen</button>
+      </form>
+    {% else %}
+      {% if offen > 0 and zustand == 'ueberfaellig' %}<a class="knopf" href="{{ url_for('rechnung_erinnerung', rechnung_id=r.id) }}" target="_blank">{{ symbol('glocke') }}Zahlungserinnerung</a>{% endif %}
+      {% if not r.nachgetragen or r.pdf_pfad %}
+      <a class="knopf haupt" href="{{ url_for('rechnung_pdf', rechnung_id=r.id) }}" target="_blank" data-tour="pdf-oeffnen">{{ symbol('laden') }}{{ 'Original öffnen' if r.nachgetragen else 'PDF öffnen' }}</a>
+      {% endif %}
+    {% endif %}
+  </div>
+</header>
+
+{% if r.nachgetragen %}
+<div class="meldung">{{ symbol('hochladen') }}<span class="text">Nachgetragen: Diese Rechnung wurde vor dem Programm erstellt.{% if not r.pdf_pfad %} Ein Original-PDF ist nicht hinterlegt.{% endif %}</span>
+  {% if not r.pdf_pfad %}
+  <form class="inline" method="post" action="{{ url_for('nachtrag_original', rechnung_id=r.id) }}" enctype="multipart/form-data">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="file" name="datei" accept=".pdf,application/pdf" required style="width: auto; max-width: 220px">
+    <button class="klein-knopf">Original hinzufügen</button>
+  </form>
+  {% endif %}
+  {% if not zahlungen and not storno and not ersetzt_durch %}
+  <form class="inline" method="post" action="{{ url_for('nachtrag_entfernen', rechnung_id=r.id) }}" onsubmit="return confirm('Nachgetragene Rechnung wieder entfernen? Zum Beispiel nach einem Tippfehler, dann neu nachtragen.')">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button class="zart gefahr klein-knopf">Nachtrag entfernen</button>
+  </form>
+  {% endif %}
+</div>
+{% endif %}
+{% if original %}<div class="meldung">{{ symbol('achtung') }}<span class="text">Diese Stornorechnung hebt die <a href="{{ url_for('rechnung_ansehen', rechnung_id=original.id) }}">Rechnung {{ original.nummer }}</a> auf.</span></div>{% endif %}
+{% if ersetzt_rechnung %}<div class="meldung">{{ symbol('achtung') }}<span class="text">Diese Rechnungskorrektur ersetzt die <a href="{{ url_for('rechnung_ansehen', rechnung_id=ersetzt_rechnung.id) }}">Rechnung {{ ersetzt_rechnung.nummer }}</a>.</span></div>{% endif %}
+{% if ersetzt_durch %}<div class="meldung hinweis">{{ symbol('achtung') }}<span class="text">Berichtigt: Diese Rechnung wurde durch die <a href="{{ url_for('rechnung_ansehen', rechnung_id=ersetzt_durch.id) }}">Rechnungskorrektur {{ ersetzt_durch.nummer }}</a> ersetzt und gilt nicht mehr.</span></div>{% endif %}
+{% if storno %}<div class="meldung">{{ symbol('achtung') }}<span class="text">Storniert durch die <a href="{{ url_for('rechnung_ansehen', rechnung_id=storno.id) }}">Stornorechnung {{ storno.nummer }}</a>.</span></div>{% endif %}
+
+{% for h in mail_hinweise %}
+<div class="meldung {{ 'angebot' if h.art == 'zahlung' else 'hinweis' }}">{{ symbol('post') }}<span class="text"><strong>{{ h.titel }}</strong>{% if h.text %} – {{ h.text }}{% endif %}</span>
+  {% if h.mail_id %}<a class="knopf klein-knopf" href="{{ url_for('mail_ansehen', mail_id=h.mail_id) }}">Mail ansehen</a>{% endif %}
+  {% if h.art == 'rueckfrage' and r.status == 'ausgestellt' and r.art == 'rechnung' %}<a class="knopf klein-knopf" href="{{ url_for('rechnung_berichtigen', rechnung_id=r.id) }}">Berichtigen</a>{% endif %}
+  <form class="inline" method="post" action="{{ url_for('hinweis_setzen', hinweis_id=h.id, status='erledigt') }}">
+    <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="weiter" value="{{ request.path }}">
+    <button class="klein-knopf">Erledigt</button>
+  </form>
+</div>
+{% endfor %}
+
+<div class="raster seite">
+  <article class="karte papier">
+    <div class="kopfzeile">
+      <div class="empfaenger mehrzeilig">{{ r.empfaenger }}</div>
+      <dl class="eckdaten">
+        {% if r.nummer %}<dt>Nummer</dt><dd>{{ r.nummer }}</dd>{% endif %}
+        {% if r.datum %}<dt>Datum</dt><dd>{{ r.datum|datum }}</dd>{% endif %}
+        <dt>Leistung</dt><dd>{% if zeitraum[0] %}{{ zeitraum[0]|datum }}{% if zeitraum[1] %} – {{ zeitraum[1]|datum }}{% endif %}{% else %}<span class="gefahr">fehlt noch</span>{% endif %}</dd>
+        {% if r.faellig and r.art == 'rechnung' %}<dt>Zahlbar bis</dt><dd>{{ r.faellig|datum }}</dd>{% elif r.status == 'entwurf' %}<dt>Zahlungsziel</dt><dd>{{ r.zahlungsziel }} Tage</dd>{% endif %}
+        {% if r.bezug %}<dt>Ihr Zeichen</dt><dd>{{ r.bezug }}</dd>{% endif %}
+      </dl>
+    </div>
+    <div class="tabelle-huelle"><table>
+      <thead><tr><th>Leistung</th><th>Datum</th><th class="rechts">Menge</th><th class="rechts">Preis</th><th class="rechts">Betrag</th></tr></thead>
+      <tbody>
+      {% for p in positionen %}
+        <tr>
+          <td>{{ p.beschreibung }}{% if p.erlaeuterung %}<div class="leise klein" style="white-space: pre-line">{{ p.erlaeuterung }}</div>{% endif %}</td>
+          <td class="leise">{{ p.datum|datum }}</td>
+          <td class="zahl">{{ p.menge|menge }} {{ p.einheit }}</td>
+          <td class="zahl">{{ p.einzelpreis|euro }}</td>
+          <td class="zahl">{{ p.gesamt|euro }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    <div class="summen">
+      {% if r.ust_satz %}
+      <div><span class="leise">Netto</span><span>{{ r.netto|euro }}</span></div>
+      <div><span class="leise">zzgl. {{ r.ust_satz }} % Umsatzsteuer</span><span>{{ r.ust|euro }}</span></div>
+      {% endif %}
+      <div class="gesamt"><span>Gesamt</span><span>{{ r.brutto|euro }}</span></div>
+    </div>
+    {% if r.steuerhinweis %}<p class="leise klein" style="margin-top: 18px">{{ r.steuerhinweis }}</p>{% endif %}
+    {% if r.zusatztext and r.art != 'storno' %}<p class="leise klein" style="margin-top: 8px; white-space: pre-line">{{ r.zusatztext }}</p>{% endif %}
+  </article>
+
+  <aside>
+    {% if r.status == 'entwurf' %}
+    <div class="karte">
+      <h3 style="margin: 0 0 6px; font-size: 15px">Noch ein Entwurf</h3>
+      <p class="leise klein" style="margin: 0">Prüfen Sie die Vorschau. Beim Ausstellen bekommt die Rechnung ihre Nummer und wird als PDF abgelegt. Danach ist sie nicht mehr änderbar.</p>
+      <form method="post" action="{{ url_for('rechnung_loeschen', rechnung_id=r.id) }}" onsubmit="return confirm('Entwurf löschen?')" style="margin-top: 14px">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <button class="zart gefahr klein-knopf">Entwurf löschen</button>
+      </form>
+    </div>
+    {% elif r.status in ('storniert', 'berichtigt') %}
+    <div class="karte status-karte">
+      <div class="leise klein">Gilt nicht mehr</div>
+      <div class="betrag leise" style="text-decoration: line-through">{{ r.brutto|euro }}</div>
+      <div class="leise klein" style="margin-top: 12px">
+        {% if ersetzt_durch %}Zahlungen laufen über die <a href="{{ url_for('rechnung_ansehen', rechnung_id=ersetzt_durch.id) }}">Rechnungskorrektur {{ ersetzt_durch.nummer }}</a>.{% else %}Diese Rechnung wurde storniert, es ist nichts mehr zu zahlen.{% endif %}
+      </div>
+    </div>
+    {% elif r.art == 'rechnung' %}
+    <div class="karte status-karte">
+      <div class="leise klein">{{ 'Noch offen' if offen > 0 else 'Bezahlt' }}</div>
+      <div class="betrag {{ 'eingang' if offen <= 0 }}">{{ (offen if offen > 0 else r.brutto)|euro }}</div>
+      <div style="margin-top: 12px">
+        {% for z in zahlungen %}
+        <div class="status-zeile">
+          <span>{{ z.datum|datum }}<div class="leise klein">{{ ('Konto: ' ~ z.gegenpartei) if z.umsatz_id else ('Von Hand' ~ (': ' ~ z.notiz if z.notiz else '')) }}</div></span>
+          <span class="zahl eingang">+ {{ z.betrag|euro }}
+            <form class="inline" method="post" action="{{ url_for('zahlung_loesen', zahlung_id=z.id) }}" onsubmit="return confirm('Diese Zahlung von der Rechnung lösen?')">
+              <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="weiter" value="{{ request.path }}">
+              <button class="zart klein-knopf" title="Zahlung lösen">{{ symbol('x') }}</button>
+            </form>
+          </span>
+        </div>
+        {% else %}
+        <div class="leise klein">Noch keine Zahlung eingegangen{% if r.faellig %}, fällig am {{ r.faellig|datum }}{% endif %}.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {% if offen > 0 and r.status == 'ausgestellt' %}
+    <details class="mehr">
+      <summary>{{ symbol('pfeil') }}Zahlung erfassen</summary>
+      <div class="innen">
+        {% if eingaenge %}
+        <form method="post" action="{{ url_for('eingang_zuordnen', rechnung_id=r.id) }}" style="margin-bottom: 18px">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <label for="umsatz_id">Eingang vom Konto</label>
+          <select id="umsatz_id" name="umsatz_id">
+            {% for u in eingaenge %}<option value="{{ u.id }}" {% if u.betrag == offen %}selected{% endif %}>{{ u.datum|datum }} · {{ u.betrag|euro }} · {{ u.gegenpartei }}</option>{% endfor %}
+          </select>
+          <button style="margin-top: 8px">Zuordnen</button>
+        </form>
+        {% endif %}
+        <form method="post" action="{{ url_for('zahlung_neu', rechnung_id=r.id) }}">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <div class="felder">
+            <div class="feld"><label for="betrag">Betrag (€)</label><input id="betrag" name="betrag" inputmode="decimal" value="{{ offen|euro(false) }}"></div>
+            <div class="feld"><label for="datum">Datum</label><input id="datum" name="datum" type="date" value="{{ heute.isoformat() }}"></div>
+          </div>
+          <div class="feld"><label for="notiz">Notiz</label><input id="notiz" name="notiz" placeholder="z. B. bar erhalten"></div>
+          <button>Zahlung erfassen</button>
+        </form>
+      </div>
+    </details>
+    {% endif %}
+
+    {% if r.status == 'ausgestellt' %}
+    <details class="mehr" data-tour="korrigieren">
+      <summary>{{ symbol('pfeil') }}Korrigieren</summary>
+      <div class="innen">
+        <p class="leise klein" style="margin-top: 0"><strong>Etwas stimmt nicht</strong> (z. B. Aktenzeichen, Datum, Betrag, Anschrift)? Dann berichtigen: Es entsteht eine Rechnungskorrektur mit neuer Nummer, die diese Rechnung ersetzt. {% if zahlungen %}Die bisherigen Zahlungen werden übernommen.{% endif %}</p>
+        <a class="knopf breit" href="{{ url_for('rechnung_berichtigen', rechnung_id=r.id) }}" data-tour="berichtigen">{{ symbol('stift') }}Rechnung berichtigen</a>
+        {% if not zahlungen %}
+        <p class="leise klein">Soll die Rechnung ganz entfallen, wird sie storniert.</p>
+        <form method="post" action="{{ url_for('rechnung_stornieren', rechnung_id=r.id) }}"
+              onsubmit="return confirm('Rechnung stornieren?\n\nEs wird eine Stornorechnung mit eigener Nummer ausgestellt. Das lässt sich nicht rückgängig machen.')">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <button class="zart gefahr">Rechnung stornieren</button>
+        </form>
+        {% endif %}
+      </div>
+    </details>
+    {% endif %}
+    {% endif %}
+
+    <div class="karte" style="margin-top: 16px">
+      <div class="leise klein">Kunde</div>
+      <div><strong>{{ kunde.name }}</strong></div>
+      <div class="klein" style="margin-top: 6px"><a href="{{ url_for('kunde_bearbeiten', kunde_id=kunde.id) }}">Kunde bearbeiten</a> · <a href="{{ url_for('rechnung_neu', kunde=kunde.id) }}">Neue Rechnung</a></div>
+      <div class="leise klein" style="margin-top: 10px">Umsatzsteuer: {{ STEUERFAELLE[r.steuerfall] }}</div>
+    </div>
+  </aside>
+</div>
+{% endblock %}

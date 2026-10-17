@@ -1,0 +1,21 @@
+From: "Praxis Dr. Beispiel" <praxis@beispiel-praxis.example>
+To: max.beispiel@example.org
+Subject: Terminbestätigung
+Date: Tue, 06 Oct 2026 14:30:00 +0200
+Message-ID: <html-1@beispiel-praxis.example>
+MIME-Version: 1.0
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: 8bit
+
+<!DOCTYPE html>
+<html><head><title>Titel der Seite</title>
+<style>p { color: red; }</style></head>
+<body>
+<p>Guten Tag&nbsp;Herr Beispiel,</p>
+<p>wir bestätigen den Termin
+am <b>Donnerstag, 15.10.2026</b> um 9:30&nbsp;Uhr.</p>
+<ul><li>Ort: Musterstraße&nbsp;5</li><li>Dauer: ca. 1&frac12; Stunden</li></ul>
+<table><tr><td>Rechnungsnummer</td><td>2026-012</td></tr></table>
+<script>alert("nicht anzeigen")</script>
+<div>Freundliche Grüße<br>Ihr Praxisteam</div>
+</body></html>

@@ -1,0 +1,23 @@
+From: JÃ¼rgen Beispiel <juergen@example.org>
+To: Grün <gruen@example.com>
+Subject: =?x-kaputt?Q?Gr=FC=DFe?= und =?utf-8?B?ung=FCltig?=
+Date: Thu, 08 Oct 2026 12:00:00 +0200
+Message-ID: <kaputt-1@example.org>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="g"
+
+--g
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+
+Falsch angegeben: Grüße aus Köln.
+--g
+Content-Type: text/plain; charset=windows-1252
+Content-Transfer-Encoding: quoted-printable
+
+Preis: 85 =80 pro Stunde =96 wie besprochen.
+--g
+Content-Type: text/plain; charset=gibt-es-nicht
+
+Unbekannter Zeichensatz: StraÃŸe.
+--g--

@@ -1,0 +1,10 @@
+{
+  "name": "tutorial",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "HYPERFRAMES_NO_TELEMETRY=1 DO_NOT_TRACK=1 HYPERFRAMES_SKIP_SKILLS=1 npx --yes hyperframes@0.8.81 preview",
+    "check": "HYPERFRAMES_NO_TELEMETRY=1 DO_NOT_TRACK=1 HYPERFRAMES_SKIP_SKILLS=1 npx --yes hyperframes@0.8.81 check",
+    "render": "HYPERFRAMES_NO_TELEMETRY=1 DO_NOT_TRACK=1 HYPERFRAMES_SKIP_SKILLS=1 npx --yes hyperframes@0.8.81 render"
+  }
+}

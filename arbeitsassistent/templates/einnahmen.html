@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% from "_diagramme.html" import monatsbalken with context %}
+{% block titel %}Einnahmen {{ e.jahr }}{% endblock %}
+{% block inhalt %}
+<header class="seitenkopf">
+  <div>
+    <a class="leise klein" href="{{ url_for('bank') }}">← Konto</a>
+    <h1 style="margin-top: 6px">Einnahmen {{ e.jahr }}</h1>
+    <p class="untertitel">Gezählt am Tag des Zahlungseingangs: bezahlte Rechnungen und Buchungen, die als Einnahme eingeordnet sind.</p>
+  </div>
+  <div class="aktionen">
+    <a class="knopf" href="{{ url_for('einnahmen', jahr=e.jahr - 1) }}" aria-label="Vorjahr">{{ symbol('zurueck') }}{{ e.jahr - 1 }}</a>
+    {% if not e.laufend %}<a class="knopf" href="{{ url_for('einnahmen', jahr=e.jahr + 1) }}" aria-label="Folgejahr">{{ e.jahr + 1 }}{{ symbol('pfeil') }}</a>{% endif %}
+  </div>
+</header>
+
+{% if e.nicht_eingeordnet %}
+<div class="meldung hinweis">{{ symbol('achtung') }}<span class="text">{{ e.nicht_eingeordnet }} Zahlungseingang{{ '' if e.nicht_eingeordnet == 1 else 'e' }} aus {{ e.jahr }} ({{ e.nicht_eingeordnet_betrag|euro }}) {{ 'ist' if e.nicht_eingeordnet == 1 else 'sind' }} noch nicht eingeordnet und {{ 'fehlt' if e.nicht_eingeordnet == 1 else 'fehlen' }} hier.</span><a class="knopf klein-knopf" href="{{ url_for('bank') }}">Einordnen</a></div>
+{% endif %}
+
+<div class="raster drei" data-tour="einnahmen-kacheln">
+  <div class="karte kennzahl gruen">
+    <div class="titel">Eingenommen{% if e.laufend %} bis heute{% endif %}</div>
+    <div class="wert">{{ e.gesamt|euro }}</div>
+    <div class="zusatz">{% if e.vergleich is not none %}{{ '+' if e.vergleich > 0 }}{{ e.vergleich }} % zum Vorjahr{% if e.laufend %} im gleichen Zeitraum{% endif %} ({{ e.vorjahr|euro }}){% else %}Kein Vorjahr zum Vergleich{% endif %}</div>
+  </div>
+  <div class="karte kennzahl">
+    <div class="titel">Durchschnitt pro Monat</div>
+    <div class="wert">{{ e.durchschnitt|euro }}</div>
+    <div class="zusatz">{% if e.monate_bisher %}über {{ e.monate_bisher }} Monat{{ '' if e.monate_bisher == 1 else 'e' }}{% if e.bester_monat is not none %} · stärkster Monat {{ MONATE[e.bester_monat] }}{% endif %}{% endif %}</div>
+  </div>
+  <a class="karte kennzahl" href="{{ url_for('rechnungsliste', filter='offen') }}">
+    <div class="titel">Noch offen</div>
+    <div class="wert">{{ e.offen|euro }}</div>
+    <div class="zusatz">{{ e.offen_anzahl }} Rechnung{{ '' if e.offen_anzahl == 1 else 'en' }} noch nicht (ganz) bezahlt</div>
+  </a>
+</div>
+
+<div class="abschnitt-kopf"><h2>Je Monat</h2></div>
+<div class="karte">
+  {{ monatsbalken(e, gross=true) }}
+  <details class="mehr" style="margin: 16px 0 0">
+    <summary>{{ symbol('pfeil') }}Als Tabelle</summary>
+    <div class="innen"><table>
+      <tbody>{% for betrag in e.monate %}<tr><td>{{ MONATE[loop.index0] }}</td><td class="zahl {{ 'leise' if not betrag }}">{{ betrag|euro }}</td></tr>{% endfor %}</tbody>
+      <tfoot><tr><td>Summe</td><td class="zahl">{{ e.gesamt|euro }}</td></tr></tfoot>
+    </table></div>
+  </details>
+</div>
+
+<div class="raster zwei" style="margin-top: 8px">
+  <section>
+    <div class="abschnitt-kopf"><h2>Je Kunde</h2></div>
+    <div class="karte ohne-rand"><table>
+      <tbody>
+      {% for k in e.kunden %}
+        <tr>
+          <td>{{ k.name }}{% if k.rechnungen %}<div class="leise klein">{{ k.rechnungen }} Rechnung{{ '' if k.rechnungen == 1 else 'en' }}</div>{% endif %}</td>
+          <td style="width: 34%"><div class="anteil" title="{{ k.anteil }} %"><span style="width: {{ k.anteil }}%"></span></div></td>
+          <td class="zahl">{{ k.betrag|euro }}<div class="leise klein">{{ k.anteil }} %</div></td>
+        </tr>
+      {% else %}
+        <tr><td class="leise">Noch keine Einnahmen in {{ e.jahr }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+  </section>
+  <section>
+    <div class="abschnitt-kopf"><h2>Nach Art</h2></div>
+    <div class="karte ohne-rand"><table>
+      <tbody>
+      {% for f in e.nach_fall %}
+        <tr><td>Rechnungen · {{ f.text }}</td><td class="zahl">{{ f.brutto|euro }}</td></tr>
+        {% if f.ust %}<tr><td class="leise">davon Umsatzsteuer</td><td class="zahl leise">{{ f.ust|euro }}</td></tr>{% endif %}
+      {% endfor %}
+      {% if e.sonstige %}<tr><td>Sonstige betriebliche Einnahmen</td><td class="zahl">{{ e.sonstige|euro }}</td></tr>{% endif %}
+      {% if not e.nach_fall and not e.sonstige %}<tr><td class="leise">Noch keine Einnahmen</td><td></td></tr>{% endif %}
+      </tbody>
+      <tfoot><tr><td>Summe</td><td class="zahl">{{ e.gesamt|euro }}</td></tr></tfoot>
+    </table></div>
+    <p class="leise klein">Mit Ausgaben und Überschuss: <a href="{{ url_for('jahresuebersicht', jahr=e.jahr) }}">Auswertung {{ e.jahr }}</a></p>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block titel %}Auswertung {{ j.jahr }}{% endblock %}
+{% block inhalt %}
+<header class="seitenkopf">
+  <div>
+    <h1>Auswertung {{ j.jahr }}</h1>
+    <p class="untertitel">Grundlage für die Einnahmen-Überschuss-Rechnung. Einnahmen zählen am Tag des Zahlungseingangs, Ausgaben am Tag der Abbuchung.</p>
+  </div>
+  <div class="aktionen">
+    <a class="knopf" href="{{ url_for('jahresuebersicht', jahr=j.jahr - 1) }}" aria-label="Vorjahr">{{ symbol('zurueck') }}{{ j.jahr - 1 }}</a>
+    <a class="knopf" href="{{ url_for('jahresuebersicht', jahr=j.jahr + 1) }}" aria-label="Folgejahr">{{ j.jahr + 1 }}{{ symbol('pfeil') }}</a>
+    <a class="knopf haupt" href="{{ url_for('jahr_csv', jahr=j.jahr) }}" data-tour="jahr-csv">{{ symbol('laden') }}Für Steuerberatung (CSV)</a>
+  </div>
+</header>
+
+{% if j.unklar %}
+<div class="meldung hinweis">{{ symbol('achtung') }}<span class="text">{{ j.unklar }} Buchungen aus {{ j.jahr }} sind noch nicht eingeordnet und fehlen hier.</span><a class="knopf klein-knopf" href="{{ url_for('bank') }}">Einordnen</a></div>
+{% endif %}
+
+<div class="raster drei" data-tour="jahr-kacheln">
+  <div class="karte kennzahl gruen"><div class="titel">Einnahmen</div><div class="wert">{{ j.einnahmen|euro }}</div></div>
+  <div class="karte kennzahl"><div class="titel">Ausgaben</div><div class="wert">{{ j.ausgaben_summe|euro }}</div></div>
+  <div class="karte kennzahl"><div class="titel">Überschuss</div><div class="wert">{{ j.ergebnis|euro }}</div></div>
+</div>
+
+<div class="raster zwei" style="margin-top: 36px">
+  <section>
+    <h2>Einnahmen</h2>
+    <div class="karte ohne-rand"><table>
+      <tbody>
+      {% for e in j.nach_fall %}
+        <tr><td>Rechnungen · {{ e.text }}</td><td class="zahl">{{ e.brutto|euro }}</td></tr>
+        {% if e.ust %}<tr><td class="leise">davon Umsatzsteuer</td><td class="zahl leise">{{ e.ust|euro }}</td></tr>{% endif %}
+      {% endfor %}
+      {% if j.sonstige %}<tr><td>Sonstige betriebliche Einnahmen</td><td class="zahl">{{ j.sonstige|euro }}</td></tr>{% endif %}
+      {% if not j.nach_fall and not j.sonstige %}<tr><td class="leise">Noch keine Einnahmen</td><td></td></tr>{% endif %}
+      </tbody>
+      <tfoot><tr><td>Summe</td><td class="zahl">{{ j.einnahmen|euro }}</td></tr></tfoot>
+    </table></div>
+  </section>
+  <section>
+    <h2>Ausgaben</h2>
+    <div class="karte ohne-rand"><table>
+      <tbody>
+      {% for a in j.ausgaben %}<tr><td>{{ a.text }}</td><td class="zahl">{{ a.betrag|euro }}</td></tr>{% endfor %}
+      {% if not j.ausgaben %}<tr><td class="leise">Noch keine Ausgaben eingeordnet</td><td></td></tr>{% endif %}
+      </tbody>
+      <tfoot><tr><td>Summe</td><td class="zahl">{{ j.ausgaben_summe|euro }}</td></tr></tfoot>
+    </table></div>
+    {% if j.privat %}<p class="leise klein">Als privat markiert und nicht mitgezählt: {{ j.privat|euro }}</p>{% endif %}
+  </section>
+</div>
+
+<h2>Einnahmen nach Monat</h2>
+<div class="karte ohne-rand"><table>
+  <tbody>
+  {% for betrag in j.monate %}<tr><td>{{ MONATE[loop.index0] }}</td><td class="zahl {{ 'leise' if not betrag }}">{{ betrag|euro }}</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+<p class="leise klein" style="margin-top: 16px">Eine Übersicht, keine fertige Steuererklärung. Die CSV-Datei enthält alle eingeordneten Buchungen des Jahres für Steuerberatung oder ELSTER.</p>
+{% endblock %}

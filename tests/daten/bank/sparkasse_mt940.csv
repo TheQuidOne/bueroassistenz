@@ -1,0 +1,4 @@
+"Auftragskonto";"Buchungstag";"Valutadatum";"Buchungstext";"Verwendungszweck";"Beguenstigter/Zahlungspflichtiger";"Kontonummer";"BLZ";"Betrag";"Waehrung";"Info"
+"0000202051";"05.03.26";"05.03.26";"GUTSCHR. UEBERWEISUNG";"SVWZ+RE2026-004";"Erika Mustermann";"DE02370502990000684712";"BEISDEFFXXX";"95,20";"EUR";"Umsatz vorgemerkt"
+"0000202051";"04.03.26";"04.03.26";"GUTSCHR. UEBERWEISUNG";"EREF+NOTPROVIDEDSVWZ+RE 2026-003 Dolmetscheinsatz";"Gehörlosenverband Beispielland e.V.";"DE02200505501015871393";"TESTDEFFXXX";"238,00";"EUR";"Umsatz gebucht"
+"0000202051";"03.03.26";"03.03.26";"FOLGELASTSCHRIFT";"EREF+MUSTER-2026-03MREF+MUSTER-0815CRED+DE98ZZZ09999999999SVWZ+Mobilfunk Rechnung 02/2026";"Mobilfunk Beispiel GmbH";"DE02100100100006820101";"BEISDEFFXXX";"-29,99";"EUR";"Umsatz gebucht"

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block titel %}Kalender{% endblock %}
+{% block inhalt %}
+<header class="seitenkopf">
+  <div>
+    <h1>{{ MONATE[monat - 1] }} {{ jahr }}</h1>
+    <p class="untertitel">Einsätze, Zahlungsfristen und Zahlungseingänge.</p>
+  </div>
+  <div class="aktionen">
+    <a class="knopf" href="{{ url_for('kalender', monat=vorher) }}" aria-label="Vorheriger Monat">{{ symbol('zurueck') }}</a>
+    <a class="knopf" href="{{ url_for('kalender') }}">Heute</a>
+    <a class="knopf" href="{{ url_for('kalender', monat=nachher) }}" aria-label="Nächster Monat">{{ symbol('pfeil') }}</a>
+  </div>
+</header>
+
+<div class="legende" data-tour="kalender-legende">
+  <span class="eintrag einsatz">Einsatz</span>
+  <span class="eintrag faellig">Zahlung fällig</span>
+  <span class="eintrag ueberfaellig">Überfällig</span>
+  <span class="eintrag eingang">Zahlung eingegangen</span>
+</div>
+
+<div class="karte ohne-rand"><div class="tabelle-huelle"><table class="kalender">
+  <thead><tr>{% for t in ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'] %}<th>{{ t }}</th>{% endfor %}</tr></thead>
+  <tbody>
+  {% for woche in wochen %}
+    <tr>
+    {% for t in woche %}
+      <td class="{{ 'fremd' if not t.im_monat }} {{ 'heute' if t.heute }}">
+        <span class="tag">{{ t.tag.day }}</span>
+        {% for e in t.eintraege %}
+          <a class="eintrag {{ e.art }}" href="{{ url_for('mail_ansehen', mail_id=e.mail_id) if e.mail_id else url_for('rechnung_ansehen', rechnung_id=e.rechnung_id) }}" title="{{ e.text }}">{{ e.text }}</a>
+        {% endfor %}
+      </td>
+    {% endfor %}
+    </tr>
+  {% endfor %}
+  </tbody>
+</table></div></div>
+{% endblock %}

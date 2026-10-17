@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block titel %}Übersicht{% endblock %}
+{% block inhalt %}
+<header class="seitenkopf">
+  <div>
+    <h1>Guten Tag{% if einst.name %}, {{ einst.name.split()[0] }}{% endif %}</h1>
+    <p class="untertitel">{{ heute|datum_lang }}</p>
+  </div>
+</header>
+
+{% if not einrichtung.fertig %}
+<section class="karte" style="margin-bottom: 24px">
+  <div class="karte-kopf">
+    <h3>In wenigen Schritten startklar</h3>
+    <span class="leise klein">{{ einrichtung.erledigt }} von {{ einrichtung.gesamt }} erledigt</span>
+  </div>
+  <div class="fortschritt"><span style="width: {{ (100 * einrichtung.erledigt / einrichtung.gesamt)|round|int }}%"></span></div>
+  <div class="schritte">
+    {% for s in einrichtung.schritte %}
+    <a class="schritt {{ 'erledigt' if s.erledigt }}" href="{{ url_for(s.ziel) }}{% if s.anker %}#{{ s.anker }}{% endif %}">
+      <span class="kreis">{% if s.erledigt %}{{ symbol('haken') }}{% else %}{{ loop.index }}{% endif %}</span>{{ s.titel }}
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<div class="raster drei">
+  <a class="karte kennzahl" href="{{ url_for('rechnungsliste', filter='offen') }}" data-tour="kpi-offen">
+    <div class="titel">Offen</div>
+    <div class="wert">{{ d.offen_summe|euro }}</div>
+    <div class="zusatz">{{ d.offen_anzahl }} Rechnung{{ '' if d.offen_anzahl == 1 else 'en' }}</div>
+  </a>
+  <a class="karte kennzahl {{ 'rot' if d.ueberfaellig }}" href="{{ url_for('rechnungsliste', filter='ueberfaellig') }}" data-tour="kpi-ueberfaellig">
+    <div class="titel">Überfällig</div>
+    <div class="wert">{{ d.ueberfaellig_summe|euro }}</div>
+    <div class="zusatz">{{ d.ueberfaellig|length }} Rechnung{{ '' if d.ueberfaellig|length == 1 else 'en' }}</div>
+  </a>
+  <a class="karte kennzahl gruen" href="{{ url_for('kalender') }}">
+    <div class="titel">Eingegangen im {{ MONATE[heute.month - 1] }}</div>
+    <div class="wert">{{ d.eingang_monat|euro }}</div>
+    <div class="zusatz">aus bezahlten Rechnungen</div>
+  </a>
+</div>
+
+{% if ki_liest.laeuft %}
+<a class="ki-zeile" href="{{ url_for('post') }}" data-tour="ki-zeile">
+  {{ symbol('funken') }}<span><strong>Lokale KI</strong> · {% if ki_liest.phase == 'lesen' and ki_liest.von %}liest gerade Mail {{ [ki_liest.nr, 1]|max }} von {{ ki_liest.von }}{% else %}holt gerade neue Mails{% endif %}</span>
+  <span class="puls" aria-hidden="true"></span>
+  <span class="weiter">Fortschritt ansehen{{ symbol('pfeil') }}</span>
+</a>
+{% elif ki_zeile.gelesen %}
+<a class="ki-zeile" href="{{ url_for('post') }}" data-tour="ki-zeile">
+  {{ symbol('funken') }}<span><strong>Lokale KI</strong> · in den letzten 7 Tagen {{ ki_zeile.gelesen }} Mail{{ '' if ki_zeile.gelesen == 1 else 's' }} gelesen, davon {{ ki_zeile.arbeit or 0 }} zur Arbeit · {{ ki_zeile.hinweise }} offene Hinweis{{ '' if ki_zeile.hinweise == 1 else 'e' }}</span>
+  <span class="weiter">Post ansehen{{ symbol('pfeil') }}</span>
+</a>
+{% elif einrichtung.fertig and not ki_zeile.konto %}
+<a class="ki-zeile" href="{{ url_for('post_einstellungen') }}" data-tour="ki-zeile">
+  {{ symbol('funken') }}<span><strong>Lokale KI</strong> · Postfach verbinden, dann liest sie Arbeits-Mails mit und erinnert an Aufträge ohne Rechnung.</span>
+  <span class="weiter">Einrichten{{ symbol('pfeil') }}</span>
+</a>
+{% endif %}
+
+<div class="abschnitt-kopf"><h2>Zu erledigen</h2></div>
+<section class="karte ohne-rand" data-tour="aufgaben">
+  {% if aufgaben %}
+  {% set merker = namespace(stimmt=false, erinnerung=false, vorbereiten=false) %}
+  <ul class="liste">
+    {% for a in aufgaben %}
+    <li>
+      <span class="symbol {{ a.farbe }}">{{ symbol(a.symbol) }}</span>
+      <div class="haupttext">
+        <strong>{{ a.titel }}</strong>{% if a.art == 'mail' %} <span class="pille ki" title="Von der lokalen KI in einer Mail erkannt">{{ symbol('funken') }}KI</span>{% endif %}
+        <div class="nebentext">{{ a.text }}</div>
+      </div>
+      <div class="knoepfe">
+        {% if a.art == 'vorschlag' %}
+          <form class="inline" method="post" action="{{ url_for('vorschlag_ablehnen', umsatz_id=a.umsatz_id) }}">
+            <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="weiter" value="{{ request.path }}">
+            <button class="zart">Stimmt nicht</button>
+          </form>
+          <form class="inline" method="post" action="{{ url_for('vorschlag_annehmen', umsatz_id=a.umsatz_id) }}">
+            <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="weiter" value="{{ request.path }}">
+            <button class="haupt" {% if not merker.stimmt %}data-tour="vorschlag-stimmt"{% set merker.stimmt = true %}{% endif %}>{{ symbol('haken') }}Stimmt</button>
+          </form>
+        {% elif a.art == 'mail' %}
+          <form class="inline" method="post" action="{{ url_for('hinweis_setzen', hinweis_id=a.hinweis_id, status='verworfen' if a.unterart in ('abrechnen', 'absage') else 'erledigt') }}">
+            <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="weiter" value="{{ request.path }}">
+            <button class="zart">{{ 'Ausblenden' if a.unterart in ('abrechnen', 'absage') else 'Erledigt' }}</button>
+          </form>
+          {% if a.mail_id %}<a class="knopf zart" href="{{ url_for('mail_ansehen', mail_id=a.mail_id) }}">{{ symbol('post') }}Mail</a>{% endif %}
+          {% if a.unterart in ('abrechnen', 'absage') %}
+            <a class="knopf haupt" href="{{ url_for('rechnung_neu', hinweis=a.hinweis_id) }}" {% if not merker.vorbereiten %}data-tour="rechnung-vorbereiten"{% set merker.vorbereiten = true %}{% endif %}>{{ symbol('rechnung') }}Rechnung vorbereiten</a>
+          {% elif a.rechnung_id %}
+            <a class="knopf" href="{{ url_for('rechnung_ansehen', rechnung_id=a.rechnung_id) }}">Rechnung ansehen{{ symbol('pfeil') }}</a>
+          {% endif %}
+        {% elif a.art == 'ueberfaellig' %}
+          <a class="knopf" href="{{ url_for('rechnung_erinnerung', rechnung_id=a.rechnung_id) }}" target="_blank" {% if not merker.erinnerung %}data-tour="erinnerung"{% set merker.erinnerung = true %}{% endif %}>{{ symbol('glocke') }}Zahlungserinnerung</a>
+        {% elif a.art == 'konto' %}
+          <a class="knopf" href="{{ url_for('bank') }}">Einordnen{{ symbol('pfeil') }}</a>
+        {% elif a.art == 'import' %}
+          <a class="knopf" href="{{ url_for('bank') }}">{{ symbol('hochladen') }}Einlesen</a>
+        {% elif a.art == 'entwurf' %}
+          <a class="knopf" href="{{ url_for('rechnungsliste', filter='entwurf') }}">Ansehen{{ symbol('pfeil') }}</a>
+        {% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <div class="leer">{{ symbol('haken', 'gross') }}<div><strong>Alles erledigt.</strong></div><div class="klein">Neue Aufgaben erscheinen hier, sobald es etwas zu tun gibt.</div></div>
+  {% endif %}
+</section>
+
+<div class="raster zwei" style="margin-top: 36px">
+  <section>
+    <h2>Demnächst fällig</h2>
+    <div class="karte ohne-rand">
+      {% if d.bald %}
+      <ul class="liste">
+        {% for o in d.bald %}
+        <li>
+          <div class="haupttext"><a href="{{ url_for('rechnung_ansehen', rechnung_id=o.id) }}"><strong>{{ o.nummer }}</strong></a> · {{ o.kunde }}
+            <div class="nebentext">fällig am {{ o.faellig|datum }}</div></div>
+          <div class="zahl">{{ o.offen|euro }}</div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}<div class="leer klein">Keine offenen Rechnungen.</div>{% endif %}
+    </div>
+  </section>
+  <section>
+    <h2>Letzte Zahlungseingänge</h2>
+    <div class="karte ohne-rand">
+      {% if d.letzte_eingaenge %}
+      <ul class="liste">
+        {% for z in d.letzte_eingaenge %}
+        <li>
+          <div class="haupttext"><a href="{{ url_for('rechnung_ansehen', rechnung_id=z.rechnung_id) }}"><strong>{{ z.nummer }}</strong></a> · {{ z.kunde_name }}
+            <div class="nebentext">eingegangen am {{ z.datum|datum }}</div></div>
+          <div class="zahl eingang">+ {{ z.betrag|euro }}</div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}<div class="leer klein">Noch keine Zahlungen.</div>{% endif %}
+    </div>
+  </section>
+</div>
+{% endblock %}

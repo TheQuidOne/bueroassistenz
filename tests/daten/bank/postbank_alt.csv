@@ -1,0 +1,16 @@
+Umsatzauskunft;
+Name;Max Mustermann;
+BLZ;10010010;
+Kontonummer;0006820101;
+IBAN;DE02100100100006820101;
+Aktueller Kontostand;1.234,56 €;
+Summe der Umsätze in den nächsten 14 Tagen;-29,99 €;
+
+Umsätze in den nächsten 14 Tagen;
+Buchungsdatum;Umsatzart;Buchungsdetails;Auftraggeber;Empfänger;Betrag (€);
+02.04.2026;Lastschrift;Mobilfunk Rechnung 03/2026;Mobilfunk Beispiel GmbH;Max Mustermann;-29,99 €;
+
+gebuchte Umsätze;
+Buchungsdatum;Wertstellung;Umsatzart;Buchungsdetails;Auftraggeber;Empfänger;Betrag (€);Saldo (€);
+20.03.2026;20.03.2026;Gutschrift;RE 2026-006 Dolmetschen Beratungsgespräch;Jobcenter Musterstadt;Max Mustermann;1.071,00 €;1.234,56 €;
+12.03.2026;12.03.2026;Lastschrift;Mobilfunk Rechnung 02/2026;Mobilfunk Beispiel GmbH;Mobilfunk Beispiel GmbH;-29,99 €;163,56 €;

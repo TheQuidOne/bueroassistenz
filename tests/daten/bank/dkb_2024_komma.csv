@@ -1,0 +1,7 @@
+﻿"Girokonto","DE02120300000000202051"
+""
+"Kontostand vom 30.09.2024:","1.200,00 €"
+""
+"Buchungsdatum","Wertstellung","Status","Zahlungspflichtige*r","Zahlungsempfänger*in","Verwendungszweck","Umsatztyp","IBAN","Betrag (€)","Gläubiger-ID","Mandatsreferenz","Kundenreferenz"
+"27.09.24","27.09.24","Gebucht","Stadt Musterstadt","Max Mustermann","RE 2024-031","Eingang","DE02500105170137075030","1.785","","",""
+"25.09.24","25.09.24","Gebucht","Max Mustermann","Bäckerei Muster","Einkauf","Ausgang","DE02370502990000684712","-8,7","","",""

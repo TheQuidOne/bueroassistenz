@@ -1,0 +1,19 @@
+Umsatzanzeige;Datei erstellt am: 31.03.2026 11:13
+;Letztes Update: aktuell
+
+IBAN;DE02 1203 0000 0000 2020 51
+Kontoname;Girokonto
+Bank;ING
+Kunde;Max Mustermann
+Zeitraum;01.03.2026 - 31.03.2026
+Saldo;3.030,20;EUR
+
+Sortierung;Datum absteigend
+
+In der CSV-Datei finden Sie alle bereits gebuchten Umsätze. Die vorgemerkten Umsätze werden nicht aufgenommen, auch wenn sie in Ihrem Internetbanking angezeigt werden.
+
+Buchung;Wertstellungsdatum;Auftraggeber/Empfänger;Buchungstext;Notiz;Verwendungszweck;Saldo;Währung;Betrag;Währung
+20.03.2026;20.03.2026;Jobcenter Musterstadt;Gutschrift;;RE2026-006 Dolmetschen Beratungsgespräch;3.030,20;EUR;1.071,00;EUR
+12.03.2026;12.03.2026;VISA BAECKEREI MUSTER;Lastschrift;;NR XXXX 1234 MUSTERSTADT DE KAUFUMSATZ 11.03 4.50;1.959,20;EUR;-4,50;EUR
+12.03.2026;12.03.2026;Erika Mustermann;Gutschrift;;Rechnung 2026-1;1.963,70;EUR;95,20;EUR
+01.03.2026;01.03.2026;Mobilfunk Beispiel GmbH;Lastschrift;;Mobilfunk Rechnung 02/2026;1.868,50;EUR;-29,99;EUR

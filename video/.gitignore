@@ -1,0 +1,8 @@
+node_modules/
+# Aufnahmen und Renderings werden jederzeit neu erzeugt.
+# tutorial/assets/aufnahmen ist ein Link auf aufnahmen/ und bleibt im Git.
+aufnahmen/
+export/
+tutorial/renders/
+tutorial/snapshots/
+tutorial/.thumbnails/

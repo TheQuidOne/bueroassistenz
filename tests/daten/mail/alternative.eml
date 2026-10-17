@@ -1,0 +1,23 @@
+From: Erika Mustermann <erika.mustermann@example.org>
+To: Max Beispiel <max.beispiel@example.org>
+Subject: Termin am Freitag
+Date: Wed, 07 Oct 2026 08:05:00 +0200
+Message-ID: <alt-1@example.org>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="grenze-alt"
+
+Dies ist eine mehrteilige Nachricht.
+
+--grenze-alt
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+
+Klartextfassung: Können Sie am Freitag, 16.10.2026, um 13 Uhr dolmetschen?
+
+--grenze-alt
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: 8bit
+
+<html><body><p>HTML-Fassung: Können Sie am <b>Freitag</b> dolmetschen?</p></body></html>
+
+--grenze-alt--

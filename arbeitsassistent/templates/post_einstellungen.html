@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block titel %}E-Mail und KI{% endblock %}
+{% block inhalt %}
+<header class="seitenkopf">
+  <div>
+    <a class="leise klein" href="{{ url_for('post') }}">← Post</a>
+    <h1 style="margin-top: 6px">E-Mail und KI</h1>
+    <p class="untertitel">Postfach verbinden, damit die KI auf diesem Mac Aufträge, Absagen und Rückfragen erkennt.</p>
+  </div>
+</header>
+
+<form method="post" class="karte" id="postfach">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="formular-abschnitt">
+    <div><h3>Postfach</h3><p>Ihr E-Mail-Anbieter und die Zugangsdaten. Das Passwort liegt nur im Schlüsselbund dieses Macs.</p></div>
+    <div>
+      <div class="felder">
+        <div class="feld">
+          <label for="mail_anbieter">Anbieter</label>
+          <select id="mail_anbieter" name="mail_anbieter" data-tour="mail-anbieter">
+            <option value="">Bitte wählen …</option>
+            {% for schluessel, a in anbieter.items() %}
+            <option value="{{ schluessel }}" data-host="{{ a.host }}" data-port="{{ a.port }}" data-hilfe="{{ a.hilfe }}"
+                    data-unterstuetzt="{{ '1' if a.get('unterstuetzt', True) else '0' }}" {% if einst.mail_anbieter == schluessel %}selected{% endif %}>{{ a.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="feld">
+          <label for="mail_benutzer">E-Mail-Adresse</label>
+          <input id="mail_benutzer" name="mail_benutzer" type="email" value="{{ einst.mail_benutzer }}" autocomplete="username">
+        </div>
+        <div class="feld">
+          <label for="passwort">Passwort oder App-Passwort</label>
+          <input id="passwort" name="passwort" type="password" autocomplete="current-password" placeholder="{{ 'gespeichert – leer lassen zum Behalten' if einst.mail_benutzer else '' }}">
+        </div>
+      </div>
+      <div class="meldung hinweis" id="anbieter-hilfe" style="display: none">{{ symbol('achtung') }}<span class="text"></span></div>
+      <details class="mehr" style="margin-top: 0" {% if einst.mail_anbieter == 'anderer' %}open{% endif %}>
+        <summary>{{ symbol('pfeil') }}Server-Einstellungen</summary>
+        <div class="innen felder">
+          <div class="feld"><label for="mail_host">IMAP-Server</label><input id="mail_host" name="mail_host" value="{{ einst.mail_host }}"></div>
+          <div class="feld"><label for="mail_port">Port</label><input id="mail_port" name="mail_port" inputmode="numeric" value="{{ einst.mail_port }}"></div>
+          <div class="feld"><label for="mail_ordner">Ordner</label><input id="mail_ordner" name="mail_ordner" value="{{ einst.mail_ordner }}"></div>
+        </div>
+      </details>
+    </div>
+  </div>
+  <div class="formular-abschnitt">
+    <div><h3>Abruf</h3><p>Beim ersten Mal werden die Mails der letzten Tage gelesen, danach nur neue.</p></div>
+    <div>
+      <div class="felder">
+        <div class="feld"><label for="mail_seit_tage">Beim ersten Abruf zurück bis (Tage)</label><input id="mail_seit_tage" name="mail_seit_tage" inputmode="numeric" value="{{ einst.mail_seit_tage }}"></div>
+      </div>
+      <label class="ankreuzen"><input type="checkbox" name="mail_aktiv" value="1" {% if einst.mail_aktiv == '1' or not einst.mail_benutzer %}checked{% endif %}> Automatisch alle 15 Minuten abrufen</label>
+    </div>
+  </div>
+  <div class="knoepfe" style="justify-content: flex-end; border-top: 1px solid var(--linie); padding-top: 18px">
+    <button class="haupt" id="speichern">Speichern und Verbindung prüfen</button>
+  </div>
+</form>
+
+<div class="raster zwei" style="margin-top: 16px">
+  <div class="karte">
+    <div class="karte-kopf"><h3>{{ symbol('schloss') }} Was mit Ihren Mails passiert</h3></div>
+    <ul class="leise" style="margin: 0; padding-left: 18px">
+      <li>Nur lesen: Das Programm verändert, löscht oder markiert nichts im Postfach.</li>
+      <li>Die KI läuft auf diesem Mac. Mails verlassen den Rechner nicht.</li>
+      <li>Die KI macht nur Vorschläge. Rechnungen ändert sie nie.</li>
+    </ul>
+  </div>
+  <div class="karte">
+    <div class="karte-kopf"><h3>{{ symbol('ki') }} Lokale KI</h3>
+      <span class="pille {{ 'z-bezahlt' if ki[0] else 'z-offen' }}">{{ 'bereit' if ki[0] else 'nicht bereit' }}</span></div>
+    <p class="leise" style="margin: 0">{{ ki[1] }}</p>
+    {% if not ki[0] %}<p class="leise klein" style="margin: 8px 0 0">Die KI wird mit dem Installationsskript eingerichtet. Führen Sie es erneut aus, falls sie fehlt.</p>{% endif %}
+  </div>
+</div>
+
+{% if einst.mail_benutzer %}
+<form method="post" action="{{ url_for('post_abmelden') }}" style="margin-top: 16px" onsubmit="return confirm('Postfach trennen und Passwort aus dem Schlüsselbund löschen?')">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <button class="zart gefahr">Postfach trennen</button>
+</form>
+{% endif %}
+
+<script>
+(function () {
+  const wahl = document.getElementById("mail_anbieter");
+  const hilfe = document.getElementById("anbieter-hilfe");
+  const knopf = document.getElementById("speichern");
+  function anwenden(fuellen) {
+    const o = wahl.selectedOptions[0];
+    if (!o || !o.value) { hilfe.style.display = "none"; return; }
+    if (fuellen && o.dataset.host) {
+      document.getElementById("mail_host").value = o.dataset.host;
+      document.getElementById("mail_port").value = o.dataset.port || "993";
+    }
+    hilfe.querySelector(".text").textContent = o.dataset.hilfe || "";
+    hilfe.style.display = o.dataset.hilfe ? "" : "none";
+    hilfe.className = "meldung " + (o.dataset.unterstuetzt === "0" ? "fehler" : "hinweis");
+    knopf.disabled = o.dataset.unterstuetzt === "0";
+    if (o.value === "anderer") document.querySelector("details.mehr").open = true;
+  }
+  wahl.addEventListener("change", () => anwenden(true));
+  anwenden(false);
+})();
+</script>
+{% endblock %}

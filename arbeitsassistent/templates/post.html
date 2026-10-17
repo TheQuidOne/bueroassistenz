@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block titel %}Post{% endblock %}
+{% block inhalt %}
+<noscript>{% if laeuft %}<meta http-equiv="refresh" content="8">{% endif %}</noscript>
+<header class="seitenkopf">
+  <div>
+    <h1>Post</h1>
+    <p class="untertitel">Arbeits-Mails, gelesen von der KI auf diesem Rechner. Hinweise erscheinen unter „Zu erledigen“.</p>
+  </div>
+  <div class="aktionen">
+    <a class="knopf" href="{{ url_for('post_einstellungen') }}">{{ symbol('einstellungen') }}E-Mail einrichten</a>
+    {% if konto %}
+    <form class="inline" method="post" action="{{ url_for('post_abrufen') }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="haupt" {% if laeuft %}disabled{% endif %} data-tour="post-abrufen">{{ symbol('laden') }}{{ 'Läuft …' if laeuft else 'Jetzt abrufen' }}</button>
+    </form>
+    {% endif %}
+  </div>
+</header>
+
+{% if not konto and not zahlen.alle %}
+<section class="karte">
+  <ul class="liste" style="margin: -20px -22px">
+    <li>
+      <span class="symbol blau">{{ symbol('post') }}</span>
+      <div class="haupttext">
+        <strong>Postfach verbinden</strong>
+        <div class="nebentext">Das Programm liest Ihre Mails nur, es verändert, löscht oder markiert nichts. Eine KI auf diesem Mac erkennt Aufträge, Absagen und Rückfragen zu Rechnungen und erinnert Sie daran. Die Mails verlassen den Rechner nicht.</div>
+      </div>
+      <a class="knopf haupt" href="{{ url_for('post_einstellungen') }}">Einrichten{{ symbol('pfeil') }}</a>
+    </li>
+  </ul>
+</section>
+{% else %}
+{% set f = ki_liest %}
+<section class="karte ki-fortschritt {{ '' if f.phase == 'lesen' and f.von else 'unbestimmt' }}" id="ki-fortschritt" aria-live="polite" {% if not f.laeuft %}hidden{% endif %} data-tour="ki-fortschritt">
+  <div class="ki-fortschritt-kopf">
+    <span class="puls" aria-hidden="true"></span>
+    <strong id="fs-titel">{% if f.phase == 'lesen' and f.von %}Die KI liest Mail {{ [f.nr, 1]|max }} von {{ f.von }}{% else %}Neue Mails werden vom Server geholt …{% endif %}</strong>
+    <span class="leise klein" id="fs-rest"></span>
+  </div>
+  <div class="fortschritt"><span id="fs-balken" style="width: {{ (100 * ([f.nr - 1, 0]|max) / f.von)|round|int if f.von else 0 }}%"></span></div>
+  <div class="leise klein" style="margin-top: 8px">Sie können das Programm währenddessen normal benutzen. Diese Anzeige aktualisiert sich von selbst, fertige Mails erscheinen danach in der Liste.</div>
+</section>
+<section class="karte" style="margin-bottom: 20px" data-tour="post-stand">
+  <div class="knoepfe" style="justify-content: space-between">
+    <div>
+      {% if konto %}<strong>{{ konto.benutzer }}</strong>{% else %}<strong>Kein Postfach verbunden</strong>{% endif %}
+      <div class="leise klein">
+        {% if laeuft %}Läuft gerade, Fortschritt siehe oben
+        {% elif einst.mail_letzter_abruf %}Zuletzt abgerufen am {{ einst.mail_letzter_abruf|datum }} um {{ einst.mail_letzter_abruf[11:16] }} Uhr{% if einst.mail_stand %} · {{ einst.mail_stand }}{% endif %}
+        {% elif konto %}Noch nicht abgerufen.{% endif %}
+        {% if einst.mail_aktiv == '1' %} · automatisch alle 15 Minuten{% endif %}
+      </div>
+      {% if konto and einst.mail_aktiv != '1' %}<div class="leise klein" style="margin-top: 4px">Automatischer Abruf ist aus: Neue Mails kommen nur mit „Jetzt abrufen“. <a href="{{ url_for('post_einstellungen') }}">Einschalten</a></div>{% endif %}
+    </div>
+    <span class="pille {{ 'z-bezahlt' if ki[0] else 'z-offen' }}" title="{{ ki[1] }}">KI {{ 'bereit' if ki[0] else 'nicht bereit' }}</span>
+  </div>
+  {% if einst.mail_letzter_fehler %}<div class="meldung fehler" style="margin: 14px 0 0">{{ symbol('achtung') }}<span class="text">{{ einst.mail_letzter_fehler }}</span></div>{% endif %}
+  {% if zahlen.neu and not laeuft %}<div class="leise klein" style="margin-top: 10px">{{ zahlen.neu }} Mail{{ '' if zahlen.neu == 1 else 's' }} warten noch auf die KI.</div>{% endif %}
+</section>
+
+<nav class="segmente" aria-label="Filter">
+  <a href="{{ url_for('post', filter='arbeit') }}" {% if filter == 'arbeit' %}aria-current="page"{% endif %}>Arbeit<span class="anzahl">{{ zahlen.arbeit or 0 }}</span></a>
+  <a href="{{ url_for('post', filter='alle') }}" {% if filter == 'alle' %}aria-current="page"{% endif %}>Alle<span class="anzahl">{{ zahlen.alle or 0 }}</span></a>
+</nav>
+
+<div class="karte ohne-rand">
+  {% if mails %}
+  <div class="tabelle-huelle"><table>
+    <thead><tr><th>Datum</th><th>Von</th><th>Betreff</th><th>Erkannt</th></tr></thead>
+    <tbody>
+    {% for m in mails %}{% set a = auswertungen[m.id] %}
+      <tr class="klickbar" data-href="{{ url_for('mail_ansehen', mail_id=m.id) }}">
+        <td class="leise" style="white-space: nowrap">{{ m.datum|datum }}</td>
+        <td><strong style="font-weight: 550">{{ m.absender_name or m.absender_adresse }}</strong></td>
+        <td><a href="{{ url_for('mail_ansehen', mail_id=m.id) }}" style="color: inherit">{{ m.betreff or '(ohne Betreff)' }}</a>
+          {% if a and a.zusammenfassung %}<div class="zweck" style="max-width: 520px" title="{{ a.zusammenfassung }}">{{ a.zusammenfassung }}</div>{% endif %}</td>
+        <td style="white-space: nowrap">
+          {% if m.status == 'neu' %}<span class="pille">wird gelesen</span>
+          {% elif m.status == 'fehler' %}<span class="pille z-ueberfaellig">nicht lesbar</span>
+          {% elif a %}<span class="pille {{ 'z-offen' if m.offen else '' }}">{{ MAILARTEN.get(a.art, a.art) if a.arbeit or a.art == 'verdaechtig' else 'keine Arbeit' }}</span>{% endif %}
+          {% if m.offen %}<div class="leise klein" style="margin-top: 2px">{{ m.offen }} offene{{ 'r' if m.offen == 1 else '' }} Hinweis{{ '' if m.offen == 1 else 'e' }}</div>{% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}
+  <div class="leer">{% if filter == 'arbeit' %}Noch keine Arbeits-Mails erkannt.{% else %}Noch keine Mails abgerufen.{% endif %}</div>
+  {% endif %}
+</div>
+<script>
+(function () {
+  const karte = document.getElementById("ki-fortschritt");
+  if (!karte) return;
+  let lief = !karte.hidden;
+  const titel = document.getElementById("fs-titel");
+  const rest = document.getElementById("fs-rest");
+  const balken = document.getElementById("fs-balken");
+  function restText(sekunden, geschaetzt) {
+    if (sekunden == null) return "";
+    const minuten = Math.round(sekunden / 60);
+    const text = sekunden < 60 ? "noch weniger als eine Minute" : "noch etwa " + minuten + (minuten === 1 ? " Minute" : " Minuten");
+    return text + (geschaetzt ? " (Schätzung)" : "");
+  }
+  function zeigen(f) {
+    if (!f.laeuft) {
+      if (lief) location.reload();  // fertig: Liste mit den gelesenen Mails zeigen
+      return;
+    }
+    lief = true;
+    karte.hidden = false;
+    if (f.phase === "lesen" && f.von) {
+      karte.classList.remove("unbestimmt");
+      titel.textContent = "Die KI liest Mail " + Math.max(f.nr, 1) + " von " + f.von;
+      balken.style.width = Math.round(100 * Math.max(f.nr - 1, 0) / f.von) + "%";
+      rest.textContent = restText(f.rest_sekunden, f.geschaetzt);
+    } else {
+      karte.classList.add("unbestimmt");
+      titel.textContent = "Neue Mails werden vom Server geholt …";
+      rest.textContent = "";
+    }
+  }
+  async function fragen() {
+    try {
+      const antwort = await fetch("{{ url_for('post_stand') }}", { cache: "no-store" });
+      zeigen(await antwort.json());
+    } catch (e) { /* Programm startet gerade neu: gleich noch einmal */ }
+    setTimeout(fragen, lief ? 2000 : 10000);
+  }
+  fragen();
+})();
+</script>
+{% endif %}
+{% endblock %}
