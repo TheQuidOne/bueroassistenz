@@ -209,9 +209,12 @@ def vorschlaege(db: sqlite3.Connection) -> list[dict]:
     ):
         teile = []
         for rechnung_id, betrag in json.loads(v["zahlungen"]):
-            r = rechnungen.rechnung(db, rechnung_id)
+            r = db.execute("SELECT nummer FROM rechnungen WHERE id = ?", (rechnung_id,)).fetchone()
+            if r is None:  # Rechnung inzwischen gelöscht: Vorschlag gilt nicht mehr
+                break
             teile.append({"id": rechnung_id, "nummer": r["nummer"], "betrag": betrag})
-        ergebnis.append({"v": v, "rechnungen": teile})
+        else:
+            ergebnis.append({"v": v, "rechnungen": teile})
     return ergebnis
 
 

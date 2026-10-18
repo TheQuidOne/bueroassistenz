@@ -222,10 +222,18 @@ Grundlage des Honorars (JVEG).
 - **Kunden löschen** (auf der Seite des Kunden): mit seinen Entwürfen, solange es keine
   ausgestellte Rechnung für ihn gibt. Mail-Hinweise verlieren nur die Zuordnung. Das stand
   in der Sprachnachricht vom 2026-10-17 und war zuerst übersehen worden.
-- **Bewusst nicht:** Ausgestellte Rechnungen löschen. Eine verschickte Rechnung ist ein Beleg
-  (GoBD); für Fehler gibt es Rechnungskorrektur und Storno. Eine Lücke in der Nummernfolge
-  lässt sich mit der freien Nummer selbst schließen. Lücken sind zulässig, wenn sie erklärbar
-  sind.
+- **Ausgestellte Rechnung löschen** (Benjamins Entscheidung am 2026-10-18, auf Wunsch des
+  Kunden): für Rechnungen, die nie verschickt wurden, vor allem Testrechnungen, deren Nummern
+  sonst für echte Rechnungen fehlen. Die freie Nummernwahl allein löst das nicht.
+  - Nur ohne Zahlungen, ohne Storno und ohne Korrektur, bestätigt durch Eintippen der Nummer
+    (`rechnungen.rechnung_loeschen`). Ein Storno oder eine Korrektur lässt sich ebenso löschen,
+    die Vorgängerin gilt dann wieder. So verschwindet eine Testrechnung samt Storno ganz.
+  - Danach ist die Nummer wieder frei. Das PDF wird nicht vernichtet, sondern nach
+    `rechnungen/geloescht/` verschoben, und die Tabelle `loeschungen` vermerkt Nummer,
+    Kunde, Betrag und Zeitpunkt. Das schützt vor Versehen und erklärt Lücken.
+  - Bankvorschläge zu der Rechnung werden verworfen, Mail-Hinweise verlieren die Zuordnung.
+  - Der Hinweis im Programm sagt deutlich: Verschickte Rechnungen sind Belege und werden
+    storniert oder berichtigt. Für diese Unterscheidung ist der Kunde selbst verantwortlich.
 
 ## Name und Veröffentlichung (2026-10-17)
 

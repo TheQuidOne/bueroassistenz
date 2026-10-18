@@ -22,8 +22,9 @@ Gebärdensprachdolmetscher (DGS), der mit sensiblen Daten arbeitet.
   - Schrift der Rechnungen wählbar: Noto Sans (Standard) oder Arial. Schlusstext und
     Grußformel vor der Unterschrift stehen in den Einstellungen.
   - Rechnungsnummer beim Ausstellen: Das Programm schlägt die nächste vor, eine andere freie
-    Nummer lässt sich eintragen. Überweisungs-QR-Code abschaltbar. Rechnungsliste nach jeder
-    Spalte sortierbar.
+    Nummer lässt sich eintragen. Nie verschickte Rechnungen (etwa Tests) lassen sich löschen,
+    ihre Nummer wird wieder frei. Überweisungs-QR-Code abschaltbar. Rechnungsliste nach jeder
+    Spalte sortierbar. Kunden ohne ausgestellte Rechnungen lassen sich löschen.
   - Alte Rechnungen von vor dem Programm nachtragen, auf Wunsch aus dem PDF ausgelesen
     (E-Rechnung exakt, sonst die lokale KI als Vorschlag).
   - Das PDF hat einen Überweisungs-QR-Code und Pflichtangaben je nach Umsatzsteuerfall

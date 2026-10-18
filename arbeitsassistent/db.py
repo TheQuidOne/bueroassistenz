@@ -136,6 +136,19 @@ CREATE TABLE IF NOT EXISTS mails (
     art TEXT
 );
 
+-- Gelöschte ausgestellte Rechnungen (nur nie verschickte, etwa Tests). Ihre Nummer ist danach
+-- wieder frei; das PDF liegt in rechnungen/geloescht. Die Liste erklärt Lücken in der Nummernfolge.
+CREATE TABLE IF NOT EXISTS loeschungen (
+    id INTEGER PRIMARY KEY,
+    nummer TEXT NOT NULL,
+    art TEXT NOT NULL,
+    kunde TEXT NOT NULL,
+    datum TEXT,
+    brutto INTEGER NOT NULL,
+    pdf_pfad TEXT,
+    geloescht TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS hinweise (
     id INTEGER PRIMARY KEY,
     mail_id INTEGER REFERENCES mails(id) ON DELETE CASCADE,

@@ -361,6 +361,7 @@ def erstellen(ordner: Path | None = None) -> Flask:
             ersetzt_rechnung=ersetzt_rechnung, ersetzt_durch=ersetzt_durch,
             vorschlag_nummer=rechnungen.naechste_nummer(db, date.today(), dbmod.einstellungen(db))
             if r["status"] == "entwurf" else "",
+            loeschbar=r["status"] != "entwurf" and not rechnungen.loeschen_moeglich(db, rechnung_id),
             zeitraum=rechnungen.leistungszeitraum(r, rechnungen.positionen(db, rechnung_id)),
             mail_hinweise=hinweise.zur_rechnung(db, rechnung_id),
             eingaenge=db.execute(
@@ -390,6 +391,17 @@ def erstellen(ordner: Path | None = None) -> Flask:
         antwort = aktion(rechnung_id, lambda: rechnungen.entwurf_loeschen(verbindung(), rechnung_id),
                          "Entwurf gelöscht.")
         return antwort or redirect(url_for("rechnungsliste"))
+
+    @app.post("/rechnungen/<int:rechnung_id>/endgueltig-loeschen")
+    def rechnung_endgueltig_loeschen(rechnung_id):
+        try:
+            nummer = rechnungen.rechnung_loeschen(verbindung(), rechnung_id, request.form.get("bestaetigung", ""), ordner)
+        except Fehler as fehler:
+            flash(str(fehler), "fehler")
+            return redirect(url_for("rechnung_ansehen", rechnung_id=rechnung_id))
+        flash(f"Rechnung {nummer} ist gelöscht, die Nummer ist wieder frei. Das PDF liegt im Ordner "
+              "„rechnungen/geloescht“.", "ok")
+        return redirect(url_for("rechnungsliste"))
 
     @app.post("/rechnungen/<int:rechnung_id>/stornieren")
     def rechnung_stornieren(rechnung_id):

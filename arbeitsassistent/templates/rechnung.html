@@ -184,6 +184,24 @@
     {% endif %}
     {% endif %}
 
+    {% if loeschbar %}
+    <details class="mehr" data-tour="rechnung-loeschen">
+      <summary>{{ symbol('pfeil') }}Löschen</summary>
+      <div class="innen">
+        <p class="leise klein" style="margin-top: 0"><strong>Nur für Rechnungen, die nie verschickt wurden</strong>, etwa zum Ausprobieren. Die Nummer {{ r.nummer }} ist danach wieder frei. Verschickte Rechnungen bitte stornieren oder berichtigen, sie sind Belege.{% if r.storno_zu or r.ersetzt %} Die {{ 'stornierte' if r.storno_zu else 'ersetzte' }} Rechnung gilt danach wieder.{% endif %}</p>
+        <form method="post" action="{{ url_for('rechnung_endgueltig_loeschen', rechnung_id=r.id) }}"
+              onsubmit="return confirm('Rechnung {{ r.nummer }} wirklich löschen?')">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <div class="feld">
+            <label for="bestaetigung" class="klein">Zum Bestätigen die Nummer eintippen</label>
+            <input id="bestaetigung" name="bestaetigung" autocomplete="off" placeholder="{{ r.nummer }}" required>
+          </div>
+          <button class="gefahr breit">Rechnung endgültig löschen</button>
+        </form>
+      </div>
+    </details>
+    {% endif %}
+
     <div class="karte" style="margin-top: 16px">
       <div class="leise klein">Kunde</div>
       <div><strong>{{ kunde.name }}</strong></div>

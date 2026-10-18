@@ -6,6 +6,7 @@ Korrigiert wird über eine Rechnungskorrektur (ersetzt die Rechnung) oder eine S
 """
 
 import hashlib
+import json
 import re
 import sqlite3
 from datetime import date, datetime, timedelta
@@ -641,9 +642,73 @@ def nachtrag_loeschen(db: sqlite3.Connection, rechnung_id: int, ordner: Path | N
         raise Fehler("Diese Rechnung wurde storniert oder berichtigt und bleibt deshalb erhalten.")
     with dbmod.Transaktion(db):
         db.execute("UPDATE hinweise SET rechnung_id = NULL WHERE rechnung_id = ?", (rechnung_id,))
+        _vorschlaege_entfernen(db, rechnung_id)
         db.execute("DELETE FROM rechnungen WHERE id = ?", (rechnung_id,))
     if r["pdf_pfad"]:
         (ordner / r["pdf_pfad"]).unlink(missing_ok=True)
+
+
+# --- Ausgestellte Rechnung löschen ----------------------------------------------------
+
+
+def _vorschlaege_entfernen(db: sqlite3.Connection, rechnung_id: int) -> None:
+    """Abgleich-Vorschläge, die auf diese Rechnung zeigen, verwerfen (der Umsatz ist danach wieder offen)."""
+    for v in db.execute("SELECT id, zahlungen FROM vorschlaege").fetchall():
+        if any(rid == rechnung_id for rid, _ in json.loads(v["zahlungen"])):
+            db.execute("DELETE FROM vorschlaege WHERE id = ?", (v["id"],))
+
+
+def loeschen_moeglich(db: sqlite3.Connection, rechnung_id: int) -> str:
+    """Leer, wenn die ausgestellte Rechnung gelöscht werden darf, sonst der Grund."""
+    r = rechnung(db, rechnung_id)
+    if r["status"] == "entwurf":
+        return "Entwürfe werden über „Entwurf löschen“ entfernt."
+    if r["nachgetragen"]:
+        return "Nachgetragene Rechnungen werden über „Nachtrag entfernen“ gelöscht."
+    if r["status"] != "ausgestellt":
+        return "Diese Rechnung wurde storniert oder berichtigt. Bitte zuerst Storno bzw. Korrektur löschen."
+    if bezahlt(db, rechnung_id):
+        return "Zu dieser Rechnung sind Zahlungen gebucht. Bitte diese zuerst lösen."
+    if db.execute("SELECT 1 FROM rechnungen WHERE storno_zu = ? OR ersetzt = ?", (rechnung_id, rechnung_id)).fetchone():
+        return "Zu dieser Rechnung gibt es ein Storno oder eine Korrektur. Bitte zuerst diese löschen."
+    return ""
+
+
+def rechnung_loeschen(db: sqlite3.Connection, rechnung_id: int, bestaetigung: str, ordner: Path | None = None) -> str:
+    """Löscht eine ausgestellte Rechnung, die nie verschickt wurde (z. B. einen Test). Gibt ihre Nummer zurück.
+
+    Nur ohne Zahlungen, Storno und Korrektur, bestätigt durch Eintippen der Nummer. Die Nummer
+    ist danach wieder frei. Das PDF wandert nach rechnungen/geloescht, die Löschung wird in
+    `loeschungen` vermerkt. War sie selbst ein Storno oder eine Korrektur, gilt die Vorgängerin
+    wieder als ausgestellt. Verschickte Rechnungen werden storniert oder berichtigt, nicht gelöscht.
+    """
+    ordner = ordner or dbmod.datenordner()
+    grund = loeschen_moeglich(db, rechnung_id)
+    if grund:
+        raise Fehler(grund)
+    r = rechnung(db, rechnung_id)
+    if " ".join((bestaetigung or "").split()) != r["nummer"]:
+        raise Fehler(f"Zum Löschen bitte die Rechnungsnummer {r['nummer']} genau eintippen.")
+    jetzt = datetime.now()
+    neuer_pfad = None
+    if r["pdf_pfad"] and (ordner / r["pdf_pfad"]).is_file():
+        ziel = ordner / "rechnungen" / "geloescht" / f"{_dateiname(r['nummer'])}_geloescht_{jetzt:%Y%m%d-%H%M%S}.pdf"
+        ziel.parent.mkdir(parents=True, exist_ok=True)
+        (ordner / r["pdf_pfad"]).rename(ziel)
+        neuer_pfad = str(ziel.relative_to(ordner))
+    vorgaenger = r["storno_zu"] or r["ersetzt"]
+    with dbmod.Transaktion(db):
+        db.execute(
+            "INSERT INTO loeschungen (nummer, art, kunde, datum, brutto, pdf_pfad, geloescht) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (r["nummer"], "korrektur" if r["ersetzt"] else r["art"], kunde(db, r["kunde_id"])["name"], r["datum"],
+             r["brutto"], neuer_pfad, jetzt.isoformat(timespec="seconds")),
+        )
+        db.execute("UPDATE hinweise SET rechnung_id = NULL WHERE rechnung_id = ?", (rechnung_id,))
+        _vorschlaege_entfernen(db, rechnung_id)
+        db.execute("DELETE FROM rechnungen WHERE id = ?", (rechnung_id,))
+        if vorgaenger:
+            db.execute("UPDATE rechnungen SET status = 'ausgestellt' WHERE id = ?", (vorgaenger,))
+    return r["nummer"]
 
 
 def erinnerung(db: sqlite3.Connection, rechnung_id: int, einst: dict, heute: date | None = None,
@@ -657,7 +722,7 @@ def erinnerung(db: sqlite3.Connection, rechnung_id: int, einst: dict, heute: dat
         raise Fehler("Für diese Rechnung ist nichts mehr offen.")
     daten = pdf.erinnerung_pdf(druckdaten(db, rechnung_id), absender(einst, ordner), rest, heute,
                                heute + timedelta(days=frist_tage))
-    name = f"{r['nummer']}_Zahlungserinnerung_{heute.isoformat()}.pdf"
+    name = f"{_dateiname(r['nummer'])}_Zahlungserinnerung_{heute.isoformat()}.pdf"
     try:
         _ablegen(ordner, r["nummer"], tag(r["datum"]).year, daten, name)
     except FileExistsError:
