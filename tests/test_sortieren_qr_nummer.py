@@ -121,3 +121,28 @@ def test_qr_code_in_den_einstellungen(app, client):
     assert dbmod.einstellungen(dbmod.verbinden(app.config["ORDNER"]))["girocode"] == "0"
     client.post("/einstellungen", data={**formular, "girocode": ["1", "0"]})  # Haken gesetzt
     assert dbmod.einstellungen(dbmod.verbinden(app.config["ORDNER"]))["girocode"] == "1"
+
+
+# --- Kunden löschen ------------------------------------------------------------------------
+
+
+def test_kunde_loeschen(db, einst, kunde, ordner):
+    probe = rechnungen.kunde_speichern(db, {"name": "Testkunde", "anschrift": "Weg 1\n12345 Ort"})
+    entwurf(db, einst, probe)
+    assert rechnungen.kunde_loeschen(db, probe) == 1
+    assert not db.execute("SELECT 1 FROM kunden WHERE id = ?", (probe,)).fetchone()
+    rechnungen.ausstellen(db, entwurf(db, einst, kunde), einst, TAG, ordner)
+    with pytest.raises(Fehler, match="ausgestellte Rechnungen"):
+        rechnungen.kunde_loeschen(db, kunde)
+
+
+def test_kunde_loeschen_in_der_oberflaeche(app, client):
+    csrf = schluessel(client)
+    client.post("/kunden/neu", data={"csrf": csrf, "name": "Nur zum Ausprobieren", "anschrift": "Weg 3\n12345 Ort"})
+    db = dbmod.verbinden(app.config["ORDNER"])
+    kid = db.execute("SELECT id FROM kunden WHERE name = 'Nur zum Ausprobieren'").fetchone()[0]
+    assert "Kunden löschen" in client.get(f"/kunden/{kid}").get_data(as_text=True)
+    antwort = client.post(f"/kunden/{kid}/loeschen", data={"csrf": csrf}, follow_redirects=True)
+    assert "Nur zum Ausprobieren gelöscht" in antwort.get_data(as_text=True)
+    mit_rechnungen = db.execute("SELECT kunde_id FROM rechnungen WHERE status = 'ausgestellt' LIMIT 1").fetchone()[0]
+    assert "Löschen nicht möglich" in client.get(f"/kunden/{mit_rechnungen}").get_data(as_text=True)

@@ -478,6 +478,18 @@ def erstellen(ordner: Path | None = None) -> Flask:
     def kunde_bearbeiten(kunde_id):
         return kunde_formular(kunde_id)
 
+    @app.post("/kunden/<int:kunde_id>/loeschen")
+    def kunde_entfernen(kunde_id):
+        db = verbindung()
+        try:
+            name = rechnungen.kunde(db, kunde_id)["name"]
+            entwuerfe = rechnungen.kunde_loeschen(db, kunde_id)
+        except Fehler as fehler:
+            flash(str(fehler), "fehler")
+            return redirect(url_for("kunde_bearbeiten", kunde_id=kunde_id))
+        flash(f"{name} gelöscht" + (f", dazu {entwuerfe} Entwurf/Entwürfe." if entwuerfe else "."), "ok")
+        return redirect(url_for("kundenliste"))
+
     def kunde_formular(kunde_id: int | None):
         db = verbindung()
         if request.method == "POST":
@@ -492,7 +504,10 @@ def erstellen(ordner: Path | None = None) -> Flask:
                 return redirect(url_for("rechnung_neu", kunde=neue_id))
             return redirect(url_for("kundenliste"))
         k = rechnungen.kunde(db, kunde_id) if kunde_id else {}
-        return render_template("kunde_form.html", k=k, kunde_id=kunde_id, weiter=request.args.get("weiter", ""))
+        belege = db.execute("SELECT COUNT(*) FROM rechnungen WHERE kunde_id = ? AND status != 'entwurf'",
+                            (kunde_id,)).fetchone()[0] if kunde_id else 0
+        return render_template("kunde_form.html", k=k, kunde_id=kunde_id, weiter=request.args.get("weiter", ""),
+                               belege=belege)
 
     # --- Bank --------------------------------------------------------------
 

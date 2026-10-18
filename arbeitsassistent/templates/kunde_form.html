@@ -53,4 +53,18 @@
     <button class="haupt" data-tour="kunde-speichern">Speichern</button>
   </div>
 </form>
+{% if kunde_id %}
+<div class="karte" style="margin-top: 16px">
+  {% if belege %}
+  <p class="leise klein" style="margin: 0">Löschen nicht möglich: Zu diesem Kunden gibt es {{ belege }} ausgestellte Rechnung{{ '' if belege == 1 else 'en' }}. Sie sind Belege und brauchen den Kunden.</p>
+  {% else %}
+  <form method="post" action="{{ url_for('kunde_entfernen', kunde_id=kunde_id) }}" class="knoepfe" style="justify-content: space-between"
+        onsubmit="return confirm('Kunden „{{ k.name }}“ löschen?\n\nEntwürfe für diesen Kunden werden mit gelöscht.')">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <span class="leise klein">Kunde nicht mehr gebraucht oder nur zum Ausprobieren angelegt?</span>
+    <button class="zart gefahr">Kunden löschen</button>
+  </form>
+  {% endif %}
+</div>
+{% endif %}
 {% endblock %}

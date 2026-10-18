@@ -219,6 +219,9 @@ Grundlage des Honorars (JVEG).
   Vorschlag (`naechste_nummer`) in einem Feld und lässt sich überschreiben. Geprüft wird nur,
   dass die Nummer nicht leer, höchstens 40 Zeichen lang und noch nicht vergeben ist
   (`rechnungen.nummer_pruefen`). Das Storno nimmt weiter den Vorschlag.
+- **Kunden löschen** (auf der Seite des Kunden): mit seinen Entwürfen, solange es keine
+  ausgestellte Rechnung für ihn gibt. Mail-Hinweise verlieren nur die Zuordnung. Das stand
+  in der Sprachnachricht vom 2026-10-17 und war zuerst übersehen worden.
 - **Bewusst nicht:** Ausgestellte Rechnungen löschen. Eine verschickte Rechnung ist ein Beleg
   (GoBD); für Fehler gibt es Rechnungskorrektur und Storno. Eine Lücke in der Nummernfolge
   lässt sich mit der freien Nummer selbst schließen. Lücken sind zulässig, wenn sie erklärbar

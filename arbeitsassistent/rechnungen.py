@@ -212,6 +212,24 @@ def _positionen_schreiben(db: sqlite3.Connection, rechnung_id: int, positionen: 
         )
 
 
+def kunde_loeschen(db: sqlite3.Connection, kunde_id: int) -> int:
+    """Löscht einen Kunden samt seiner Entwürfe. Gibt die Zahl der gelöschten Entwürfe zurück.
+
+    Hat er ausgestellte Rechnungen, bleibt er erhalten: Sie sind Belege und brauchen ihn.
+    """
+    k = kunde(db, kunde_id)
+    belege = [z["nummer"] for z in db.execute(
+        "SELECT nummer FROM rechnungen WHERE kunde_id = ? AND status != 'entwurf' ORDER BY nummer", (kunde_id,))]
+    if belege:
+        liste = ", ".join(belege[:5]) + (" …" if len(belege) > 5 else "")
+        raise Fehler(f"{k['name']} hat ausgestellte Rechnungen ({liste}) und bleibt deshalb erhalten.")
+    with dbmod.Transaktion(db):
+        entwuerfe = db.execute("DELETE FROM rechnungen WHERE kunde_id = ? AND status = 'entwurf'", (kunde_id,)).rowcount
+        db.execute("UPDATE hinweise SET kunde_id = NULL WHERE kunde_id = ?", (kunde_id,))
+        db.execute("DELETE FROM kunden WHERE id = ?", (kunde_id,))
+    return entwuerfe
+
+
 def entwurf_loeschen(db: sqlite3.Connection, rechnung_id: int) -> None:
     if rechnung(db, rechnung_id)["status"] != "entwurf":
         raise Fehler("Nur Entwürfe lassen sich löschen. Ausgestellte Rechnungen werden storniert.")
