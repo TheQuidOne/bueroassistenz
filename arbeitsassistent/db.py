@@ -182,6 +182,9 @@ STANDARDS = {
     "kontoinhaber": "",
     "steuerfall": "steuerfrei",
     "zahlungsziel": "14",
+    "zahlungsziel_zaehlung": "werktage",  # werktage (Mo–Fr ohne Feiertage) oder kalendertage
+    "bundesland": "",  # für Feiertage, leer = nur bundesweite (fristen.BUNDESLAENDER)
+    "dateiname": "{nummer}",  # Dateiname der Rechnungs-PDFs, Platzhalter: rechnungen.DATEINAME_PLATZHALTER
     # Rechnungsnummer: JJJJ = Jahr, MM = Monat, NNN = laufende Nummer (siehe rechnungen.py)
     "nummer_format": "JJJJ-NNN",
     "nummer_neu_ab": "jahr",  # laufende Nummer beginnt neu: jahr, monat oder nie

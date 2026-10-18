@@ -66,7 +66,7 @@ def test_nachtragen_offen_und_bezahlt(db, einst, kunde, ordner):
                                        "betrag": "315,14", "leistung_von": "2026-09-18"}, einst, ordner,
                                   original=b"%PDF-1.4 altes Original")
     r = rechnungen.rechnung(db, offen)
-    assert (r["status"], r["nachgetragen"], r["brutto"], r["faellig"]) == ("ausgestellt", 1, 31514, "2026-10-04")
+    assert (r["status"], r["nachgetragen"], r["brutto"], r["faellig"]) == ("ausgestellt", 1, 31514, "2026-10-08")
     assert (ordner / r["pdf_pfad"]).read_bytes() == b"%PDF-1.4 altes Original"
     assert [o.nummer for o in rechnungen.offene_rechnungen(db)] == ["2026-09-146"]
     # Das Programm zählt nach der nachgetragenen Nummer weiter

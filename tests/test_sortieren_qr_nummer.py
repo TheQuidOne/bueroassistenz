@@ -30,7 +30,7 @@ def test_nummer_beim_ausstellen_frei_waehlen(db, einst, kunde, ordner):
     a = entwurf(db, einst, kunde)
     assert rechnungen.ausstellen(db, a, einst, TAG, ordner, nummer="  RE 2026/77 ") == "RE 2026/77"
     r = rechnungen.rechnung(db, a)
-    assert r["pdf_pfad"] == "rechnungen/2026/RE_2026_77.pdf" and "Rechnung Nr. RE 2026/77" in text(
+    assert r["pdf_pfad"] == "rechnungen/2026/RE 2026_77.pdf" and "Rechnung Nr. RE 2026/77" in text(
         (ordner / r["pdf_pfad"]).read_bytes())
     b = entwurf(db, einst, kunde)
     with pytest.raises(Fehler, match="schon vergeben"):

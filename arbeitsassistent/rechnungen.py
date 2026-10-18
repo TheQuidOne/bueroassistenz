@@ -14,7 +14,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from . import db as dbmod
-from . import pdf, unterschrift, zugferd
+from . import fristen, pdf, unterschrift, zugferd
 from .geld import anteil, cent_aus_text, mal, menge_aus_text
 from .modell import STEUERFAELLE, Absender, Fehler, OffeneRechnung, Position, RechnungsDruck
 
@@ -299,7 +299,7 @@ def druckdaten(db: sqlite3.Connection, rechnung_id: int, heute: date | None = No
         datum=datum,
         leistung_von=von or datum,
         leistung_bis=bis,
-        faellig=tag(r["faellig"]) or datum + timedelta(days=r["zahlungsziel"]),
+        faellig=tag(r["faellig"]) or fristen.faellig(datum, r["zahlungsziel"], dbmod.einstellungen(db)),
         empfaenger=r["empfaenger"],
         positionen=pos,
         netto=r["netto"],
@@ -418,10 +418,18 @@ def _pruefe_absender(einst: dict) -> None:
         raise Fehler("Vor der ersten Rechnung bitte in den Einstellungen ergänzen: " + ", ".join(fehlt) + ".")
 
 
-def _ablegen(ordner: Path, nummer: str, jahr: int, daten: bytes, name: str | None = None) -> tuple[str, str]:
-    """Schreibt das PDF nach rechnungen/JJJJ/ und gibt (relativer Pfad, sha256) zurück."""
+def _ablegen(ordner: Path, nummer: str, jahr: int, daten: bytes, name: str | None = None,
+             eindeutig: bool = False) -> tuple[str, str]:
+    """Schreibt das PDF nach rechnungen/JJJJ/ und gibt (relativer Pfad, sha256) zurück.
+
+    Nie überschreiben: Mit `eindeutig` bekommt ein schon vorhandener Name „ (2)“, „ (3)“ … angehängt.
+    """
     ziel = ordner / "rechnungen" / str(jahr) / (name or f"{_dateiname(nummer)}.pdf")
     ziel.parent.mkdir(parents=True, exist_ok=True)
+    stamm, zaehler = ziel.stem, 2
+    while eindeutig and ziel.exists():
+        ziel = ziel.with_name(f"{stamm} ({zaehler}).pdf")
+        zaehler += 1
     with open(ziel, "xb") as datei:  # niemals überschreiben
         datei.write(daten)
     return str(ziel.relative_to(ordner)), hashlib.sha256(daten).hexdigest()
@@ -462,12 +470,13 @@ def ausstellen(db: sqlite3.Connection, rechnung_id: int, einst: dict, heute: dat
             "UPDATE rechnungen SET nummer = ?, status = 'ausgestellt', datum = ?, faellig = ?, "
             "leistung_von = ?, leistung_bis = ?, empfaenger = ?, steuerhinweis = ?, ausgestellt = ? "
             "WHERE id = ?",
-            (nummer, iso(heute), iso(heute + timedelta(days=r["zahlungsziel"])), iso(von), iso(bis),
+            (nummer, iso(heute), iso(fristen.faellig(heute, r["zahlungsziel"], einst)), iso(von), iso(bis),
              empfaenger_text(k), steuerhinweis(r["steuerfall"], einst),
              datetime.now().isoformat(timespec="seconds"), rechnung_id),
         )
         daten = _e_rechnung(db, rechnung_id, einst, heute, ordner)
-        pfad, sha = _ablegen(ordner, nummer, heute.year, daten)
+        name = dateiname(einst, nummer, k["name"], heute, "korrektur" if r["ersetzt"] else "rechnung")
+        pfad, sha = _ablegen(ordner, nummer, heute.year, daten, f"{name}.pdf", eindeutig=True)
         db.execute("UPDATE rechnungen SET pdf_pfad = ?, pdf_sha256 = ? WHERE id = ?", (pfad, sha, rechnung_id))
     return nummer
 
@@ -507,7 +516,8 @@ def stornieren(db: sqlite3.Connection, rechnung_id: int, einst: dict, heute: dat
         )
         db.execute("UPDATE rechnungen SET status = 'storniert' WHERE id = ?", (rechnung_id,))
         daten = _e_rechnung(db, storno_id, einst, heute, ordner)
-        pfad, sha = _ablegen(ordner, nummer, heute.year, daten)
+        name = dateiname(einst, nummer, kunde(db, r["kunde_id"])["name"], heute, "storno")
+        pfad, sha = _ablegen(ordner, nummer, heute.year, daten, f"{name}.pdf", eindeutig=True)
         db.execute("UPDATE rechnungen SET pdf_pfad = ?, pdf_sha256 = ? WHERE id = ?", (pfad, sha, storno_id))
     return storno_id
 
@@ -544,6 +554,31 @@ def berichtigen(db: sqlite3.Connection, rechnung_id: int, daten: dict, einst: di
 
 
 # --- Alte Rechnungen nachtragen ---------------------------------------------------
+
+
+# Platzhalter für den Dateinamen der Rechnungs-PDFs (Einstellungen → „dateiname“)
+DATEINAME_PLATZHALTER = ("nummer", "kunde", "datum", "jahr", "monat", "art")
+_ARTEN = {"rechnung": "Rechnung", "storno": "Stornorechnung", "korrektur": "Rechnungskorrektur"}
+
+
+def dateiname_pruefen(muster: str) -> None:
+    """Das Format braucht {nummer} (damit jede Datei eindeutig ist) und nur bekannte Platzhalter."""
+    unbekannt = [p for p in re.findall(r"\{([^}]*)\}", muster) if p not in DATEINAME_PLATZHALTER]
+    if unbekannt:
+        erlaubt = ", ".join("{" + p + "}" for p in DATEINAME_PLATZHALTER)
+        raise Fehler(f"Unbekannter Platzhalter im Dateinamen: {{{unbekannt[0]}}}. Möglich sind {erlaubt}.")
+    if "{nummer}" not in muster:
+        raise Fehler("Der Dateiname braucht {nummer}, damit jede Rechnung eine eigene Datei bekommt.")
+
+
+def dateiname(einst: dict, nummer: str, kunde_name: str, datum: date, art: str = "rechnung") -> str:
+    """Dateiname ohne „.pdf“ nach dem Format aus den Einstellungen, sicher für jedes Dateisystem."""
+    werte = {"nummer": nummer, "kunde": kunde_name, "datum": datum.isoformat(), "jahr": str(datum.year),
+             "monat": f"{datum.month:02d}", "art": _ARTEN.get(art, "Rechnung")}
+    text = re.sub(r"\{(\w+)\}", lambda t: werte.get(t[1], ""), einst.get("dateiname") or "{nummer}")
+    text = re.sub(r'[/\\:*?"<>|\x00-\x1f]+', "_", text)
+    text = re.sub(r"_{2,}", "_", " ".join(text.split())).strip(" ._")[:120]
+    return text or _dateiname(nummer)
 
 
 def _dateiname(nummer: str) -> str:
@@ -592,7 +627,7 @@ def nachtragen(db: sqlite3.Connection, daten: dict, einst: dict, ordner: Path | 
     if bis and bis < von:
         raise Fehler("Das Ende des Leistungszeitraums liegt vor dem Anfang.")
     ziel = int(k["zahlungsziel"] or einst.get("zahlungsziel") or 14)
-    faellig = datum_aus_text(daten.get("faellig")) or datum + timedelta(days=ziel)
+    faellig = datum_aus_text(daten.get("faellig")) or fristen.faellig(datum, ziel, einst)
     bezahlt_am = datum_aus_text(daten.get("bezahlt_am"))
     if original is not None and not original.startswith(b"%PDF"):
         raise Fehler("Das Original muss eine PDF-Datei sein.")
@@ -613,7 +648,8 @@ def nachtragen(db: sqlite3.Connection, daten: dict, einst: dict, ordner: Path | 
             db.execute("INSERT INTO zahlungen (rechnung_id, datum, betrag, notiz) VALUES (?, ?, ?, ?)",
                        (rechnung_id, iso(bezahlt_am), brutto, "nachgetragen"))
         if original is not None:
-            pfad, sha = _ablegen(ordner, nummer, datum.year, original, f"{_dateiname(nummer)}_original.pdf")
+            name = dateiname(einst, nummer, k["name"], datum)
+            pfad, sha = _ablegen(ordner, nummer, datum.year, original, f"{name}_original.pdf", eindeutig=True)
             db.execute("UPDATE rechnungen SET pdf_pfad = ?, pdf_sha256 = ? WHERE id = ?", (pfad, sha, rechnung_id))
     return rechnung_id
 
@@ -721,8 +757,9 @@ def erinnerung(db: sqlite3.Connection, rechnung_id: int, einst: dict, heute: dat
     if r["status"] != "ausgestellt" or r["art"] != "rechnung" or rest <= 0:
         raise Fehler("Für diese Rechnung ist nichts mehr offen.")
     daten = pdf.erinnerung_pdf(druckdaten(db, rechnung_id), absender(einst, ordner), rest, heute,
-                               heute + timedelta(days=frist_tage))
-    name = f"{_dateiname(r['nummer'])}_Zahlungserinnerung_{heute.isoformat()}.pdf"
+                               fristen.faellig(heute, frist_tage, einst))
+    basis = dateiname(einst, r["nummer"], kunde(db, r["kunde_id"])["name"], tag(r["datum"]) or heute)
+    name = f"{basis}_Zahlungserinnerung_{heute.isoformat()}.pdf"
     try:
         _ablegen(ordner, r["nummer"], tag(r["datum"]).year, daten, name)
     except FileExistsError:

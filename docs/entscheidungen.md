@@ -206,6 +206,23 @@ Grundlage des Honorars (JVEG).
   E-Rechnung als Hinweis (IncludedNote).
 - Geprüft mit Mustang: Rechnung mit IK und Zusatztext gültig (PDF/A-3, EN 16931).
 
+## Zahlungsziel in Werktagen, Dateiname der PDFs (2026-10-18)
+
+- **Zahlungsziel** zählt standardmäßig in Werktagen: Montag bis Freitag, ohne die
+  Feiertage des gewählten Bundeslands (Einstellungen, Standard: nur bundesweite). Umstellbar
+  auf Kalendertage. In beiden Fällen rückt eine Fälligkeit am Wochenende oder Feiertag auf
+  den nächsten Werktag (wie § 193 BGB). Gilt für Ausstellen, Nachtrag, Vorschau und die
+  neue Frist in der Zahlungserinnerung. Schon ausgestellte Rechnungen behalten ihr Datum.
+- Feiertage aus dem Paket `holidays` (offline, je Bundesland), Code in `fristen.py`.
+  „Werktage“ meint hier Montag bis Freitag, wie es im Alltag verstanden wird; rechtlich
+  zählt auch der Samstag als Werktag.
+- **Dateiname** der gespeicherten PDFs in den Einstellungen (`dateiname`, Standard
+  `{nummer}`). Platzhalter `{nummer}`, `{kunde}`, `{datum}`, `{jahr}`, `{monat}`, `{art}`.
+  `{nummer}` ist Pflicht, damit jede Rechnung eine eigene Datei bekommt. Unsichere
+  Zeichen werden ersetzt. Ein schon vorhandener Name bekommt „ (2)“ angehängt, es wird nie
+  überschrieben. Erinnerungen und Originale von Nachträgen folgen demselben Muster. Beim
+  Herunterladen heißt die Datei wie gespeichert.
+
 ## Sortieren, QR-Code abschaltbar, Rechnungsnummer frei wählbar (2026-10-18)
 
 - **Rechnungsliste** nach Nummer, Kunde, Datum, Fällig, Status oder Betrag sortierbar

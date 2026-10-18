@@ -57,7 +57,7 @@ def test_ausstellen_nummern_und_pdf(db, einst, kunde, ordner):
     assert rechnungen.ausstellen(db, a, einst, TAG, ordner) == "2026-001"
     assert rechnungen.ausstellen(db, b, einst, TAG, ordner) == "2026-002"
     r = rechnungen.rechnung(db, a)
-    assert r["status"] == "ausgestellt" and r["faellig"] == "2026-10-15"
+    assert r["status"] == "ausgestellt" and r["faellig"] == "2026-10-21"
     assert (r["leistung_von"], r["leistung_bis"]) == ("2026-09-28", None)  # aus den Positionen
     pdf = (ordner / r["pdf_pfad"]).read_bytes()
     assert pdf.startswith(b"%PDF") and hashlib.sha256(pdf).hexdigest() == r["pdf_sha256"]
@@ -93,7 +93,7 @@ def test_zahlungen_offen_und_zustand(db, einst, kunde, ordner):
     rid = entwurf(db, einst, kunde)
     rechnungen.ausstellen(db, rid, einst, TAG, ordner)
     assert rechnungen.offen(db, rid) == 14766
-    assert rechnungen.zustand(rechnungen.rechnung(db, rid), 14766, date(2026, 10, 20))[0] == "ueberfaellig"
+    assert rechnungen.zustand(rechnungen.rechnung(db, rid), 14766, date(2026, 10, 22))[0] == "ueberfaellig"
     rechnungen.zahlung_erfassen(db, rid, 10000, TAG)
     assert rechnungen.offen(db, rid) == 4766
     assert [o.offen for o in rechnungen.offene_rechnungen(db)] == [4766]

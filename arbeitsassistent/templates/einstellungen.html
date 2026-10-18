@@ -68,7 +68,22 @@
           </select>
           <div class="hilfe">Gilt, wenn beim Kunden nichts anderes steht.</div>
         </div>
-        <div class="feld"><label for="zahlungsziel">Zahlungsziel (Tage)</label><input id="zahlungsziel" name="zahlungsziel" inputmode="numeric" value="{{ einst.zahlungsziel }}"></div>
+        <div class="feld"><label for="zahlungsziel">Zahlungsziel ({{ ZIEL_EINHEIT }})</label><input id="zahlungsziel" name="zahlungsziel" inputmode="numeric" value="{{ einst.zahlungsziel }}"></div>
+      </div>
+      <div class="felder" data-tour="zahlungsziel">
+        <div class="feld">
+          <label for="zahlungsziel_zaehlung">Zahlungsziel zählt in</label>
+          <select id="zahlungsziel_zaehlung" name="zahlungsziel_zaehlung">
+            {% for schluessel, text in zaehlweisen.items() %}<option value="{{ schluessel }}" {% if einst.zahlungsziel_zaehlung == schluessel %}selected{% endif %}>{{ text }}</option>{% endfor %}
+          </select>
+          <div class="hilfe">Fällt das Ende auf ein Wochenende oder einen Feiertag, gilt der nächste Werktag. Heute ausgestellt wäre eine Rechnung fällig am {{ beispiel_faellig|datum }}.</div>
+        </div>
+        <div class="feld">
+          <label for="bundesland">Bundesland (für Feiertage)</label>
+          <select id="bundesland" name="bundesland">
+            {% for schluessel, text in bundeslaender.items() %}<option value="{{ schluessel }}" {% if einst.bundesland == schluessel %}selected{% endif %}>{{ text }}</option>{% endfor %}
+          </select>
+        </div>
       </div>
       <div class="felder" data-tour="rechnungsnummer">
         <div class="feld">
@@ -89,6 +104,15 @@
         </div>
       </div>
       <p class="hilfe" style="margin: -4px 0 18px">Die nächste Rechnung bekommt die Nummer <strong>{{ naechste }}</strong>.</p>
+      <div class="feld" data-tour="dateiname">
+        <label for="dateiname">Dateiname der gespeicherten Rechnungen</label>
+        <input id="dateiname" name="dateiname" list="dateinamen" value="{{ einst.dateiname }}" placeholder="{nummer}">
+        <datalist id="dateinamen">
+          <option value="{nummer}"><option value="Rechnung_{nummer}"><option value="Rechnung_{nummer}_{kunde}">
+          <option value="{datum}_{kunde}_{nummer}"><option value="{art} {nummer} {kunde}">
+        </datalist>
+        <div class="hilfe">Platzhalter: {nummer}, {kunde}, {datum}, {jahr}, {monat}, {art} (Rechnung, Stornorechnung, Rechnungskorrektur). {nummer} muss vorkommen. Beispiel: <strong>{{ beispiel_datei }}</strong>. Gilt für neue Rechnungen, schon gespeicherte behalten ihren Namen.</div>
+      </div>
       <div class="felder" data-tour="schrift">
         <div class="feld">
           <label for="schrift">Schrift auf Rechnungen</label>

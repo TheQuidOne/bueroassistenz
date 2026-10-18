@@ -25,6 +25,8 @@ Gebärdensprachdolmetscher (DGS), der mit sensiblen Daten arbeitet.
     Nummer lässt sich eintragen. Nie verschickte Rechnungen (etwa Tests) lassen sich löschen,
     ihre Nummer wird wieder frei. Überweisungs-QR-Code abschaltbar. Rechnungsliste nach jeder
     Spalte sortierbar. Kunden ohne ausgestellte Rechnungen lassen sich löschen.
+  - Zahlungsziel in Werktagen (Montag bis Freitag, ohne Feiertage des gewählten
+    Bundeslands) oder Kalendertagen. Dateiname der gespeicherten PDFs frei wählbar.
   - Alte Rechnungen von vor dem Programm nachtragen, auf Wunsch aus dem PDF ausgelesen
     (E-Rechnung exakt, sonst die lokale KI als Vorschlag).
   - Das PDF hat einen Überweisungs-QR-Code und Pflichtangaben je nach Umsatzsteuerfall

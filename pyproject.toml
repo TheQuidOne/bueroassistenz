@@ -12,6 +12,7 @@ dependencies = [
     "drafthorse>=2025.2",
     "pillow>=10.4",  # Farbprofil für PDF/A, Unterschrift aufbereiten
     "pypdf>=5",  # eingescannte Unterschrift aus PDF lesen
+    "holidays>=0.60",  # Feiertage je Bundesland für das Zahlungsziel in Werktagen
 ]
 
 [project.optional-dependencies]
