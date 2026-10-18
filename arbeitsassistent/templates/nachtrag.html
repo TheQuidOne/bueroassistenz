@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block titel %}Alte Rechnung nachtragen{% endblock %}
+{% block titel %}Alte Rechnungen nachtragen{% endblock %}
 {% block inhalt %}
 <header class="seitenkopf">
   <div>
     <a class="leise klein" href="{{ url_for('rechnungsliste') }}">← Alle Rechnungen</a>
-    <h1 style="margin-top: 6px">Alte Rechnung nachtragen</h1>
+    <h1 style="margin-top: 6px">Alte Rechnungen nachtragen</h1>
     <p class="untertitel">Für Rechnungen, die Sie geschrieben haben, bevor es dieses Programm gab. Sie behalten ihre Nummer, zählen bei Einnahmen und offenen Posten mit, und Zahlungen aus dem Kontoauszug werden ihnen zugeordnet.</p>
   </div>
 </header>
@@ -14,21 +14,67 @@
   <input type="hidden" name="csrf" value="{{ csrf }}">
   <div class="knoepfe" style="justify-content: space-between">
     <div style="flex: 1; min-width: 260px">
-      <strong>Aus dem PDF auslesen lassen</strong> <span class="leise">(optional)</span>
-      <div class="leise klein">Die KI auf diesem Mac liest Nummer, Datum, Kunde und Betrag aus der alten Rechnung. Das dauert bis zu einer Minute. Danach prüfen Sie alles. Das PDF wird als Original mitgespeichert.</div>
+      <strong>Aus PDFs auslesen lassen</strong>
+      <div class="leise klein">Sie können viele alte Rechnungen auf einmal auswählen: im Auswahlfenster mit gedrückter ⌘-Taste anklicken oder mit ⌘A alle eines Ordners. Die KI auf diesem Mac liest Nummer, Datum, Kunde und Betrag, etwa eine halbe Minute pro Rechnung. Unbekannte Kunden schlägt sie zum Anlegen vor. Die PDFs werden als Original mitgespeichert.</div>
     </div>
-    <input type="file" name="datei" accept=".pdf,application/pdf" required style="width: auto; max-width: 300px">
+    <input type="file" name="dateien" accept=".pdf,application/pdf" multiple required style="width: auto; max-width: 300px">
     <button id="auslesen-knopf">{{ symbol('funken') }}Auslesen</button>
   </div>
 </form>
+
+{% if stapel %}
+<form method="post" action="{{ url_for('nachtrag_liste_uebernehmen') }}" class="karte" id="stapel" style="padding: 0">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="knoepfe" style="justify-content: space-between; padding: 16px 20px 12px">
+    <strong>Ausgelesene PDFs</strong>
+    <span id="stapel-stand" class="leise klein" data-offen="{{ offen }}" data-fertig="{{ fertig }}">
+      {% if offen %}{{ symbol('funken') }} Die KI liest … {{ fertig }} von {{ fertig + offen }} fertig.{% else %}Alle {{ fertig }} gelesen.{% endif %}
+    </span>
+  </div>
+  <div class="tabelle-huelle"><table>
+    <thead><tr><th style="width: 36px"></th><th>Datei</th><th>Nummer</th><th>Datum</th><th>Kunde</th><th class="zahl">Betrag</th><th>Bezahlt am</th><th></th></tr></thead>
+    <tbody>
+    {% for e in stapel %}{% set w = e.werte %}
+    <tr>
+      <td>{% if e.vollstaendig %}<input type="checkbox" name="auswahl" value="{{ e.id }}" checked aria-label="{{ e.dateiname }} übernehmen">{% endif %}</td>
+      <td class="klein" style="max-width: 230px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis" title="{{ e.dateiname }}">{{ e.dateiname }}</td>
+      {% if e.status in ('wartet', 'liest') %}
+      <td colspan="5" class="leise klein">{{ 'Die KI liest gerade …' if e.status == 'liest' else 'Wartet …' }}</td>
+      {% elif e.status == 'fehler' %}
+      <td colspan="5" class="leise klein">{{ e.vorschlag.hinweis }}</td>
+      {% else %}
+      <td style="white-space: nowrap">{{ w.nummer or '–' }}</td>
+      <td style="white-space: nowrap">{{ w.datum|datum if w.datum else '–' }}</td>
+      <td>{% if w.kunde_id == 'neu' %}{{ w.neuer_kunde_name }} <span class="pille ki">neu</span>{% elif w.kunde_id %}{{ kundennamen.get(w.kunde_id, '–') }}{% else %}–{% endif %}</td>
+      <td class="zahl">{{ w.betrag ~ ' €' if w.betrag else '–' }}</td>
+      <td>{% if e.vollstaendig %}<input type="date" name="bezahlt_am_{{ e.id }}" aria-label="Bezahlt am" style="width: auto">{% else %}<span class="leise klein" title="{{ e.vorschlag.hinweis }}">bitte prüfen</span>{% endif %}</td>
+      {% endif %}
+      <td style="white-space: nowrap; text-align: right">
+        {% if e.status in ('gelesen', 'fehler') %}<a class="knopf zart klein-knopf" href="{{ url_for('nachtrag_pruefen', eintrag_id=e.id) }}">Prüfen</a>{% endif %}
+        <button class="knopf zart klein-knopf" formaction="{{ url_for('nachtrag_liste_entfernen', eintrag_id=e.id) }}" formnovalidate title="Aus der Liste nehmen" aria-label="Aus der Liste nehmen">×</button>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  <div style="padding: 14px 20px 18px; border-top: 1px solid var(--linie)">
+    <div class="hilfe" style="margin-bottom: 12px">Mit Häkchen: Nummer, Datum, Kunde und Betrag stehen so im PDF. Diese lassen sich auf einmal nachtragen. „Bezahlt am“ leer lassen heißt: noch offen. Ohne Häkchen (etwa bei eingescannten Rechnungen) bitte einzeln mit „Prüfen“ durchsehen. Neue Kunden werden beim Nachtragen angelegt.</div>
+    <div class="knoepfe" style="justify-content: flex-end">
+      <button class="knopf zart" formaction="{{ url_for('nachtrag_liste_leeren') }}" formnovalidate onclick="return confirm('Alle PDFs aus dieser Liste nehmen? Schon nachgetragene Rechnungen bleiben erhalten.')">Liste leeren</button>
+      {% if stapel|selectattr('vollstaendig')|list %}<button class="haupt">{{ symbol('haken') }}Ausgewählte nachtragen</button>{% endif %}
+    </div>
+  </div>
+</form>
+{% endif %}
 {% endif %}
 
 {% if vorschlag.hinweis %}
 <div class="meldung {{ 'hinweis' if not vorschlag.quelle or vorschlag.quelle == 'Bild' else '' }}">{{ symbol('funken') }}<span class="text">{{ vorschlag.hinweis }}
-  {% if vorschlag.kunde_name and not daten.kunde_id %}<br>Kunde laut PDF: <strong>{{ vorschlag.kunde_name }}</strong>. Bitte unten auswählen oder <a href="{{ url_for('kunde_neu', weiter=url_for('rechnung_nachtragen')) }}">neu anlegen</a>.{% endif %}</span></div>
+  {% if daten.kunde_id == 'neu' %}<br>Den Kunden <strong>{{ daten.neuer_kunde_name }}</strong> gibt es noch nicht. Er wird mit dieser Rechnung angelegt, bitte Name und Anschrift unten prüfen.{% endif %}</span></div>
 {% endif %}
 
-<form method="post" action="{{ url_for('nachtrag_speichern') }}" enctype="multipart/form-data" class="karte" data-tour="nachtrag-formular">
+{% if stapel and not schluessel %}<details id="hand" class="karte"><summary><strong>Eine Rechnung ohne PDF von Hand eintragen</strong></summary>{% endif %}
+<form method="post" action="{{ url_for('nachtrag_speichern') }}" enctype="multipart/form-data" class="{{ '' if stapel and not schluessel else 'karte' }}" data-tour="nachtrag-formular">
   <input type="hidden" name="csrf" value="{{ csrf }}">
   <input type="hidden" name="schluessel" value="{{ schluessel }}">
   <input type="hidden" name="dateiname" value="{{ dateiname }}">
@@ -38,6 +84,7 @@
       <select id="kunde_id" name="kunde_id" required>
         <option value="">Bitte wählen …</option>
         {% for k in kunden %}<option value="{{ k.id }}" {% if daten.kunde_id|string == k.id|string %}selected{% endif %}>{{ k.name }}</option>{% endfor %}
+        <option value="neu" {% if daten.kunde_id == 'neu' %}selected{% endif %}>+ Neuer Kunde …</option>
       </select>
     </div>
     <div class="feld">
@@ -47,6 +94,17 @@
     <div class="feld">
       <label for="datum">Rechnungsdatum</label>
       <input id="datum" name="datum" type="date" value="{{ daten.datum }}" required>
+    </div>
+  </div>
+  <div class="felder" id="neuer-kunde" {% if daten.kunde_id != 'neu' %}hidden{% endif %}>
+    <div class="feld">
+      <label for="neuer_kunde_name">Name des neuen Kunden</label>
+      <input id="neuer_kunde_name" name="neuer_kunde_name" value="{{ daten.neuer_kunde_name }}">
+    </div>
+    <div class="feld">
+      <label for="neuer_kunde_anschrift">Anschrift <span class="leise">(optional)</span></label>
+      <textarea id="neuer_kunde_anschrift" name="neuer_kunde_anschrift" rows="3">{{ daten.neuer_kunde_anschrift }}</textarea>
+      <div class="hilfe">Kommt in die Kundenliste. E-Mail und Zahlungsziel lassen sich dort später ergänzen.</div>
     </div>
   </div>
   <div class="felder">
@@ -105,18 +163,57 @@
   {% endif %}
 
   <div class="knoepfe" style="justify-content: flex-end; border-top: 1px solid var(--linie); padding-top: 18px">
-    <a class="knopf zart" href="{{ url_for('rechnungsliste') }}">Abbrechen</a>
+    <a class="knopf zart" href="{{ url_for('rechnung_nachtragen') + '#stapel' if schluessel else url_for('rechnungsliste') }}">{{ 'Zurück zur Liste' if schluessel else 'Abbrechen' }}</a>
     <button class="haupt" data-tour="nachtrag-speichern">{{ symbol('haken') }}Rechnung nachtragen</button>
   </div>
 </form>
+{% if stapel and not schluessel %}</details>{% endif %}
 
 <script>
-// Während die KI liest, zeigen, dass etwas passiert.
+// Hochladen kann bei vielen PDFs etwas dauern.
 const auslesen = document.getElementById("auslesen");
 if (auslesen) auslesen.addEventListener("submit", () => {
   const knopf = document.getElementById("auslesen-knopf");
   knopf.disabled = true;
-  knopf.textContent = "Die KI liest … (bis zu einer Minute)";
+  knopf.textContent = "Wird hochgeladen …";
 });
+
+// Neuer Kunde: Name und Anschrift nur zeigen, wenn „+ Neuer Kunde …“ gewählt ist.
+const kundeWahl = document.getElementById("kunde_id");
+const neuerKunde = document.getElementById("neuer-kunde");
+const kundeUmschalten = () => {
+  const neu = kundeWahl.value === "neu";
+  neuerKunde.hidden = !neu;
+  document.getElementById("neuer_kunde_name").required = neu;
+};
+kundeWahl.addEventListener("change", kundeUmschalten);
+kundeUmschalten();
+
+// Enter in einem Datumsfeld soll nicht den ersten Knopf der Liste (×) auslösen.
+const liste = document.getElementById("stapel");
+if (liste) liste.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && e.target.tagName === "INPUT") e.preventDefault();
+});
+
+// Solange die KI liest: nachsehen und die Liste neu laden, sobald ein PDF fertig ist.
+// Hat jemand schon etwas eingetragen, nicht neu laden, sondern nur Bescheid geben.
+const stand = document.getElementById("stapel-stand");
+if (stand && stand.dataset.offen !== "0") {
+  let eingetragen = false;
+  document.getElementById("stapel").addEventListener("input", () => { eingetragen = true; });
+  const nachsehen = async () => {
+    try {
+      const s = await (await fetch("{{ url_for('nachtrag_stand') }}")).json();
+      if (s.fertig !== Number(stand.dataset.fertig) || s.offen === 0) {
+        if (!eingetragen) { location.reload(); return; }
+        stand.innerHTML = 'Neue Ergebnisse: <a href="">Liste aktualisieren</a>';
+        if (s.offen === 0) return;
+        stand.dataset.fertig = s.fertig;
+      }
+    } catch (e) { /* Server kurz nicht erreichbar: später noch einmal */ }
+    setTimeout(nachsehen, 3000);
+  };
+  setTimeout(nachsehen, 3000);
+}
 </script>
 {% endblock %}

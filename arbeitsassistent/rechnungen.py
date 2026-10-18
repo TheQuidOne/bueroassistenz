@@ -581,6 +581,18 @@ def dateiname(einst: dict, nummer: str, kunde_name: str, datum: date, art: str =
     return text or _dateiname(nummer)
 
 
+def _flach(text: str) -> str:
+    return re.sub(r"[\W_]+", "", (text or "").casefold())
+
+
+def kunde_nach_name(db: sqlite3.Connection, name: str) -> int | None:
+    """Kunde mit genau diesem Namen (ohne Rücksicht auf Groß-/Kleinschreibung und Satzzeichen)."""
+    for k in db.execute("SELECT id, name FROM kunden"):
+        if _flach(k["name"]) == _flach(name):
+            return k["id"]
+    return None
+
+
 def _dateiname(nummer: str) -> str:
     """Rechnungsnummer als sicherer Dateiname (alte Nummern können „/“ enthalten)."""
     return re.sub(r"[^A-Za-z0-9._-]+", "_", nummer).strip("._") or "rechnung"
@@ -596,10 +608,19 @@ def nachtragen(db: sqlite3.Connection, daten: dict, einst: dict, ordner: Path | 
     die Zahlung gleich mit.
     """
     ordner = ordner or dbmod.datenordner()
-    try:
-        k = kunde(db, int(daten.get("kunde_id") or 0))
-    except ValueError:
-        raise Fehler("Bitte einen Kunden auswählen.") from None
+    anlegen = None  # Name eines Kunden, den es noch nicht gibt; angelegt wird er erst mit der Rechnung
+    if daten.get("kunde_id") == "neu":
+        name = " ".join((daten.get("neuer_kunde_name") or "").split())
+        if not name:
+            raise Fehler("Bitte den Namen des neuen Kunden eintragen.")
+        vorhanden = kunde_nach_name(db, name)
+        k = kunde(db, vorhanden) if vorhanden else {"steuerfall": "", "zahlungsziel": None}
+        anlegen = None if vorhanden else name
+    else:
+        try:
+            k = kunde(db, int(daten.get("kunde_id") or 0))
+        except ValueError:
+            raise Fehler("Bitte einen Kunden auswählen.") from None
     nummer = (daten.get("nummer") or "").strip()
     if not nummer:
         raise Fehler("Bitte die Rechnungsnummer angeben, wie sie auf der Rechnung steht.")
@@ -634,6 +655,8 @@ def nachtragen(db: sqlite3.Connection, daten: dict, einst: dict, ordner: Path | 
     beschreibung = (daten.get("beschreibung") or "").strip() or f"Leistungen laut Rechnung {nummer}"
     jetzt = datetime.now().isoformat(timespec="seconds")
     with dbmod.Transaktion(db):
+        if anlegen:
+            k = kunde(db, kunde_speichern(db, {"name": anlegen, "anschrift": daten.get("neuer_kunde_anschrift", "")}))
         rechnung_id = db.execute(
             "INSERT INTO rechnungen (nummer, status, art, kunde_id, empfaenger, datum, leistung_von, leistung_bis, "
             "zahlungsziel, faellig, steuerfall, ust_satz, netto, ust, brutto, steuerhinweis, bezug, erstellt, "

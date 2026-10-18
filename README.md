@@ -27,7 +27,8 @@ Gebärdensprachdolmetscher (DGS), der mit sensiblen Daten arbeitet.
     Spalte sortierbar. Kunden ohne ausgestellte Rechnungen lassen sich löschen.
   - Zahlungsziel in Werktagen (Montag bis Freitag, ohne Feiertage des gewählten
     Bundeslands) oder Kalendertagen. Dateiname der gespeicherten PDFs frei wählbar.
-  - Alte Rechnungen von vor dem Programm nachtragen, auf Wunsch aus dem PDF ausgelesen
+  - Alte Rechnungen von vor dem Programm nachtragen, auf Wunsch aus den PDFs ausgelesen
+    (viele auf einmal, unbekannte Kunden werden mit Anschrift zum Anlegen vorgeschlagen)
     (E-Rechnung exakt, sonst die lokale KI als Vorschlag).
   - Das PDF hat einen Überweisungs-QR-Code und Pflichtangaben je nach Umsatzsteuerfall
     (steuerfrei nach § 4 Nr. 16 UStG, Kleinunternehmer oder 19 %).

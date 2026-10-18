@@ -172,14 +172,17 @@ def test_auslesen_scan_als_bild_und_ohne_ki():
 
 def test_nachtragen_ueber_oberflaeche(app, client, monkeypatch):
     csrf = schluessel(client)
-    assert "Alte Rechnung nachtragen" in client.get("/rechnungen").get_data(as_text=True)
+    assert "Alte Rechnungen nachtragen" in client.get("/rechnungen").get_data(as_text=True)
     roh = pdf.rechnung_pdf(ALT, ABSENDER)
     ki = FalscheKi({"rechnungsnummer": "RE-2025/141", "rechnungsdatum": "2025-12-03", "empfaenger": "",
                     "gesamtbetrag": "297.50", "leistung_von": "2025-11-27", "leistung_bis": "", "faellig": "",
                     "leistung": "Dolmetscheinsatz DGS", "ihr_zeichen": "", "steuerhinweis": ""})
     monkeypatch.setattr(postfach, "ki_fuer", lambda einst: ki)
-    seite = client.post("/rechnungen/nachtragen/auslesen", data={"csrf": csrf, "datei": (io.BytesIO(roh), "alt.pdf")},
-                        content_type="multipart/form-data").get_data(as_text=True)
+    monkeypatch.setattr(nachtrag, "stapel_anstossen", nachtrag.stapel_abarbeiten)  # ohne Hintergrund-Thread
+    client.post("/rechnungen/nachtragen/auslesen", data={"csrf": csrf, "dateien": (io.BytesIO(roh), "alt.pdf")},
+                content_type="multipart/form-data")
+    eintrag = nachtrag.stapel(dbmod.verbinden(app.config["ORDNER"]))[0]
+    seite = client.get(f"/rechnungen/nachtragen/liste/{eintrag['id']}").get_data(as_text=True)
     assert 'value="RE-2025/141"' in seite and 'value="297,50"' in seite and "Von der KI aus dem Text gelesen" in seite
     import re
     zwischen = re.search(r'name="schluessel" value="([0-9a-f]{32})"', seite).group(1)

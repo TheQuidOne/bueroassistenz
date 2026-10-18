@@ -53,7 +53,7 @@ def erstellen(ordner: Path | None = None) -> Flask:
     app = Flask(__name__)
     ordner = ordner or dbmod.datenordner()
     app.config["ORDNER"] = ordner
-    app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024
+    app.config["MAX_CONTENT_LENGTH"] = 300 * 1024 * 1024  # viele alte Rechnungen auf einmal
     app.secret_key = _geheimnis(ordner)
     app.jinja_env.filters.update(euro=euro, datum=_datum, datum_lang=_datum_lang, menge=menge_text)
     app.jinja_env.globals["symbol"] = _symbol
@@ -249,13 +249,15 @@ def erstellen(ordner: Path | None = None) -> Flask:
 
     # --- Alte Rechnungen nachtragen ----------------------------------------
 
-    zwischenablage = ordner / "nachtrag"  # hochgeladene PDFs, bis der Nachtrag gespeichert ist
+    zwischenablage = ordner / nachtrag.ZWISCHENABLAGE  # hochgeladene PDFs, bis der Nachtrag gespeichert ist
 
     def zwischen_aufraeumen() -> None:
+        """Löscht liegengebliebene PDFs, die zu keinem Eintrag der Liste mehr gehören."""
         if zwischenablage.is_dir():
             grenze = datetime.now().timestamp() - 24 * 3600
+            in_liste = {z["schluessel"] for z in verbindung().execute("SELECT schluessel FROM nachtrag_stapel")}
             for datei in zwischenablage.glob("*.pdf"):
-                if datei.stat().st_mtime < grenze:
+                if datei.stem not in in_liste and datei.stat().st_mtime < grenze:
                     datei.unlink(missing_ok=True)
 
     def zwischen_datei(schluessel: str) -> Path | None:
@@ -266,44 +268,104 @@ def erstellen(ordner: Path | None = None) -> Flask:
 
     def nachtrag_formular(daten: dict, vorschlag: dict | None = None, schluessel: str = "", dateiname: str = ""):
         db = verbindung()
+        kunden = rechnungen.kunden(db)
+        stapel = [] if schluessel else nachtrag.stapel(db)
+        for eintrag in stapel:
+            eintrag["werte"] = nachtrag.formularwerte(eintrag["vorschlag"], kunden)
+            eintrag["vollstaendig"] = nachtrag.vollstaendig(eintrag)
         return render_template("nachtrag.html", daten=daten, vorschlag=vorschlag or {}, schluessel=schluessel,
-                               dateiname=dateiname, kunden=rechnungen.kunden(db), einst=dbmod.einstellungen(db))
+                               dateiname=dateiname, kunden=kunden, kundennamen={k["id"]: k["name"] for k in kunden},
+                               einst=dbmod.einstellungen(db), stapel=stapel,
+                               offen=sum(e["status"] in ("wartet", "liest") for e in stapel),
+                               fertig=sum(e["status"] in ("gelesen", "fehler") for e in stapel))
 
     @app.get("/rechnungen/nachtragen")
     def rechnung_nachtragen():
         zwischen_aufraeumen()
-        if not rechnungen.kunden(verbindung()):
-            flash("Bitte zuerst den Kunden anlegen, an den die Rechnung ging.", "hinweis")
-            return redirect(url_for("kunde_neu", weiter=url_for("rechnung_nachtragen")))
+        db = verbindung()
+        if (db.execute("SELECT 1 FROM nachtrag_stapel WHERE status IN ('wartet', 'liest')").fetchone()
+                and not nachtrag.stapel_laeuft()):
+            nachtrag.stapel_anstossen(ordner, postfach.ki_fuer)  # etwa nach einem Neustart
         return nachtrag_formular({})
 
     @app.post("/rechnungen/nachtragen/auslesen")
     def nachtrag_auslesen():
-        datei = request.files.get("datei")
-        roh = datei.read() if datei and datei.filename else b""
-        if not roh.startswith(b"%PDF"):
-            flash("Bitte die alte Rechnung als PDF-Datei auswählen.", "fehler")
+        dateien = [d for d in request.files.getlist("dateien") + request.files.getlist("datei") if d and d.filename]
+        if not dateien:
+            flash("Bitte eine oder mehrere alte Rechnungen als PDF auswählen.", "fehler")
             return redirect(url_for("rechnung_nachtragen"))
+        angenommen = nachtrag.stapel_anlegen(verbindung(), ordner, ((d.filename, d.read()) for d in dateien))
+        if angenommen:
+            nachtrag.stapel_anstossen(ordner, postfach.ki_fuer)
+            flash(f"{angenommen} PDF{'s werden' if angenommen > 1 else ' wird'} ausgelesen. Sie können hier zusehen "
+                  "oder in der Zwischenzeit etwas anderes tun.", "ok")
+        if len(dateien) > angenommen:
+            flash(f"{len(dateien) - angenommen} Datei(en) waren keine PDFs und wurden übersprungen.", "fehler")
+        return redirect(url_for("rechnung_nachtragen") + "#stapel")
+
+    @app.get("/rechnungen/nachtragen/stand")
+    def nachtrag_stand():
+        zahlen = dict(verbindung().execute("SELECT status, COUNT(*) FROM nachtrag_stapel GROUP BY status").fetchall())
+        return jsonify(offen=zahlen.get("wartet", 0) + zahlen.get("liest", 0),
+                       fertig=zahlen.get("gelesen", 0) + zahlen.get("fehler", 0))
+
+    @app.get("/rechnungen/nachtragen/liste/<int:eintrag_id>")
+    def nachtrag_pruefen(eintrag_id):
+        db = verbindung()
+        eintrag = next((e for e in nachtrag.stapel(db) if e["id"] == eintrag_id), None)
+        if eintrag is None or eintrag["status"] not in ("gelesen", "fehler"):
+            return redirect(url_for("rechnung_nachtragen") + "#stapel")
+        daten = nachtrag.formularwerte(eintrag["vorschlag"], rechnungen.kunden(db))
+        return nachtrag_formular(daten, eintrag["vorschlag"], eintrag["schluessel"], eintrag["dateiname"])
+
+    @app.post("/rechnungen/nachtragen/liste/<int:eintrag_id>/entfernen")
+    def nachtrag_liste_entfernen(eintrag_id):
+        nachtrag.stapel_entfernen(verbindung(), ordner, eintrag_id)
+        return redirect(url_for("rechnung_nachtragen") + "#stapel")
+
+    @app.post("/rechnungen/nachtragen/liste/leeren")
+    def nachtrag_liste_leeren():
+        db = verbindung()
+        for eintrag in nachtrag.stapel(db):
+            nachtrag.stapel_entfernen(db, ordner, eintrag["id"])
+        flash("Die Liste ist leer. Schon nachgetragene Rechnungen bleiben erhalten.", "ok")
+        return redirect(url_for("rechnung_nachtragen"))
+
+    @app.post("/rechnungen/nachtragen/liste/uebernehmen")
+    def nachtrag_liste_uebernehmen():
         db = verbindung()
         einst = dbmod.einstellungen(db)
-        try:
-            v = nachtrag.vorschlag(roh, postfach.ki_fuer(einst), rechnungen.kunden(db), einst.get("name", ""))
-        except ValueError as fehler:
-            flash(str(fehler), "fehler")
-            return redirect(url_for("rechnung_nachtragen"))
-        zwischenablage.mkdir(exist_ok=True)
-        schluessel = secrets.token_hex(16)
-        (zwischenablage / f"{schluessel}.pdf").write_bytes(roh)
-        felder = ("nummer", "datum", "leistung_von", "leistung_bis", "faellig", "betrag", "steuerfall",
-                  "beschreibung", "bezug", "kunde_id")
-        daten = {k: v.get(k) or "" for k in felder}
-        return nachtrag_formular(daten, v, schluessel, datei.filename)
+        auswahl = {int(i) for i in request.form.getlist("auswahl") if i.isdigit()}
+        fertig, probleme = [], []
+        for eintrag in nachtrag.stapel(db):
+            if eintrag["id"] not in auswahl or not nachtrag.vollstaendig(eintrag):
+                continue
+            # Kundenliste jedes Mal neu: ein Kunde aus einem früheren PDF ist inzwischen vielleicht angelegt.
+            daten = nachtrag.formularwerte(eintrag["vorschlag"], rechnungen.kunden(db))
+            daten["bezahlt_am"] = request.form.get(f"bezahlt_am_{eintrag['id']}", "")
+            try:
+                original = nachtrag.zwischen_pfad(ordner, eintrag["schluessel"]).read_bytes()
+                rechnungen.nachtragen(db, daten, einst, ordner, original)
+            except (Fehler, OSError) as fehler:
+                probleme.append(f"{eintrag['dateiname']}: {fehler}")
+                continue
+            nachtrag.stapel_entfernen(db, ordner, eintrag["id"])
+            fertig.append(daten["nummer"])
+        if fertig:
+            flash(f"{len(fertig)} Rechnung{'en sind' if len(fertig) > 1 else ' ist'} nachgetragen: "
+                  f"{', '.join(fertig)}.", "ok")
+        if probleme:
+            flash("Nicht übernommen, bitte einzeln prüfen: " + " · ".join(probleme), "fehler")
+        if not fertig and not probleme:
+            flash("Bitte mindestens eine Rechnung mit Häkchen auswählen.", "hinweis")
+        return redirect(url_for("rechnung_nachtragen") + "#stapel")
 
     @app.post("/rechnungen/nachtragen")
     def nachtrag_speichern():
         f = request.form
         daten = {k: f.get(k, "") for k in ("kunde_id", "nummer", "datum", "leistung_von", "leistung_bis", "faellig",
-                                            "betrag", "steuerfall", "beschreibung", "bezug")}
+                                            "betrag", "steuerfall", "beschreibung", "bezug", "neuer_kunde_name",
+                                            "neuer_kunde_anschrift")}
         if f.get("bezahlt") == "ja":
             daten["bezahlt_am"] = f.get("bezahlt_am", "")
             if not daten["bezahlt_am"]:
@@ -312,14 +374,22 @@ def erstellen(ordner: Path | None = None) -> Flask:
         datei = request.files.get("datei")
         zwischen = zwischen_datei(f.get("schluessel", ""))
         original = zwischen.read_bytes() if zwischen else (datei.read() if datei and datei.filename else None)
+        db = verbindung()
         try:
-            rid = rechnungen.nachtragen(verbindung(), daten, dbmod.einstellungen(verbindung()), ordner, original)
+            rid = rechnungen.nachtragen(db, daten, dbmod.einstellungen(db), ordner, original)
         except Fehler as fehler:
             flash(str(fehler), "fehler")
             return nachtrag_formular(daten, schluessel=f.get("schluessel", ""), dateiname=f.get("dateiname", ""))
         if zwischen:
             zwischen.unlink(missing_ok=True)
-        flash(f"Rechnung {daten['nummer'].strip()} ist nachgetragen.", "ok")
+            db.execute("DELETE FROM nachtrag_stapel WHERE schluessel = ?", (zwischen.stem,))
+        meldung = f"Rechnung {daten['nummer'].strip()} ist nachgetragen."
+        if daten["kunde_id"] == "neu":
+            name = rechnungen.kunde(db, rechnungen.rechnung(db, rid)["kunde_id"])["name"]
+            meldung += f" Der Kunde „{name}“ steht jetzt in Ihrer Kundenliste."
+        flash(meldung, "ok")
+        if db.execute("SELECT 1 FROM nachtrag_stapel").fetchone():  # weiter mit den übrigen PDFs
+            return redirect(url_for("rechnung_nachtragen") + "#stapel")
         return redirect(url_for("rechnung_ansehen", rechnung_id=rid))
 
     @app.post("/rechnungen/<int:rechnung_id>/original")

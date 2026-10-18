@@ -6,16 +6,21 @@ aus dem Text werden geprüft (Nummer, Betrag und Daten müssen im Dokument stehe
 bleibt das Feld leer. Gespeichert wird, was im Formular steht.
 """
 
+import json
 import re
+import secrets
 import sqlite3
-from datetime import date
+import threading
+from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from io import BytesIO
+from pathlib import Path
 
 from PIL import Image
 from pypdf import PdfReader
 
 from . import abgleich
+from . import db as dbmod
 from .geld import euro
 from .ki import DATUM_MUSTER, KiFehler
 
@@ -26,6 +31,7 @@ SCHEMA = {
         "rechnungsnummer": {"type": "string", "maxLength": 40},
         "rechnungsdatum": {"type": "string", "pattern": DATUM_MUSTER},
         "empfaenger": {"type": "string", "maxLength": 120},
+        "empfaenger_anschrift": {"type": "string", "maxLength": 200},
         "gesamtbetrag": {"type": "string", "pattern": GESAMT_MUSTER},
         "leistung_von": {"type": "string", "pattern": DATUM_MUSTER},
         "leistung_bis": {"type": "string", "pattern": DATUM_MUSTER},
@@ -34,7 +40,8 @@ SCHEMA = {
         "ihr_zeichen": {"type": "string", "maxLength": 60},
         "steuerhinweis": {"type": "string", "maxLength": 160},
     },
-    "required": ["rechnungsnummer", "rechnungsdatum", "empfaenger", "gesamtbetrag", "leistung_von",
+    "required": ["rechnungsnummer", "rechnungsdatum", "empfaenger", "empfaenger_anschrift", "gesamtbetrag",
+                 "leistung_von",
                  "leistung_bis", "faellig", "leistung", "ihr_zeichen", "steuerhinweis"],
 }
 SYSTEM = (
@@ -45,6 +52,8 @@ SYSTEM = (
     "(erste) Leistungs- oder Einsatztag, leistung_bis nur bei einem Zeitraum. faellig nur, wenn ein "
     "Zahlungsdatum („zahlbar bis“) genannt ist.\n"
     "- empfaenger: Name des Rechnungsempfängers (erste Zeile der Anschrift), nie {absender}.\n"
+    "- empfaenger_anschrift: die übrigen Zeilen dieser Anschrift (z. B. Abteilung, Straße, PLZ und Ort), "
+    "jede Zeile mit \\n getrennt, ohne den Namen.\n"
     "- gesamtbetrag: der zu zahlende Endbetrag (brutto) mit zwei Nachkommastellen, z. B. 212.50.\n"
     "- leistung: die Leistung in wenigen Worten, z. B. „Dolmetscheinsatz DGS“.\n"
     "- ihr_zeichen: Aktenzeichen oder Zeichen des Kunden, falls angegeben.\n"
@@ -83,10 +92,14 @@ def _e_rechnung(leser: PdfReader) -> dict | None:
         gruende = " ".join([_wert(t.exemption_reason) for t in steuern]
                            + [_wert(n.content) for n in doc.header.notes.children])
         positionen = list(doc.trade.items.children)
+        adresse = doc.trade.agreement.buyer.address
+        zeilen = [_wert(adresse.line_one), _wert(adresse.line_two), _wert(adresse.line_three),
+                  " ".join(t for t in (_wert(adresse.postcode), _wert(adresse.city_name)) if t)]
         return {
             "nummer": _wert(doc.header.id),
             "datum": _wert(doc.header.issue_date_time),
             "kunde_name": _wert(doc.trade.agreement.buyer.name),
+            "kunde_anschrift": "\n".join(z for z in zeilen if z),
             "betrag": _wert(summe.grand_total),
             "leistung_von": _wert(doc.trade.delivery.event.occurrence) or _wert(zeitraum.start),
             "leistung_bis": _wert(zeitraum.end),
@@ -155,13 +168,29 @@ def _flach(text: str) -> str:
 
 
 def _kunde(name: str, text: str, kunden: list[sqlite3.Row]) -> int | None:
-    """Bekannter Kunde zum Empfänger: gleicher Name, sonst genau ein Kundenname im Dokument."""
-    passend = [k for k in kunden if name and abgleich.name_passt(name, k["name"])]
-    if len(passend) != 1 and name:
-        passend = [k for k in kunden if _flach(name) in _flach(k["name"]) or _flach(k["name"]) in _flach(name)]
-    if len(passend) != 1 and text:
-        passend = [k for k in kunden if _flach(k["name"]) in _flach(text)]
+    """Bekannter Kunde zum Empfänger, sonst None (dann wird ein neuer vorgeschlagen).
+
+    Lieber keiner als der falsche: Behörden derselben Stadt (Amtsgericht Köln, Landgericht Köln)
+    teilen Wörter, sind aber verschiedene Kunden. Darum zählt nur der gleiche Name oder einer, der
+    alle wesentlichen Wörter des anderen enthält (mindestens zwei, z. B. „Klinikum Musterstadt“ in
+    „Klinikum Musterstadt gGmbH“), oder ein unvollständig gelesener Name („Amtsgericht“), wenn der
+    volle Kundenname im Dokument steht. Ohne erkannten Namen: genau ein Kundenname im Dokument.
+    """
+    if name:
+        passend = [k for k in kunden if _flach(k["name"]) == _flach(name)]
+        if not passend:
+            w = abgleich.bedeutsame_woerter(name)
+            passend = [k for k in kunden if _teilmenge(abgleich.bedeutsame_woerter(k["name"]), w)]
+        if not passend and text:
+            passend = [k for k in kunden if _flach(name) in _flach(k["name"]) and _flach(k["name"]) in _flach(text)]
+    else:
+        passend = [k for k in kunden if text and _flach(k["name"]) in _flach(text)]
     return passend[0]["id"] if len(passend) == 1 else None
+
+
+def _teilmenge(a: set[str], b: set[str]) -> bool:
+    kleiner, groesser = sorted((a, b), key=len)
+    return len(kleiner) >= 2 and kleiner <= groesser
 
 
 def vorschlag(roh: bytes, ki, kunden: list[sqlite3.Row], absender: str = "") -> dict:
@@ -211,6 +240,8 @@ def vorschlag(roh: bytes, ki, kunden: list[sqlite3.Row], absender: str = "") -> 
         "beschreibung": (a.get("leistung") or "").strip(),
         "bezug": (a.get("ihr_zeichen") or "").strip(),
         "kunde_name": (a.get("empfaenger") or "").strip(),
+        "kunde_anschrift": "\n".join(z.strip() for z in (a.get("empfaenger_anschrift") or "").splitlines()
+                                      if z.strip()),
     }
     if bild:
         if werte["betrag"]:
@@ -223,6 +254,10 @@ def vorschlag(roh: bytes, ki, kunden: list[sqlite3.Row], absender: str = "") -> 
         # Nur übernehmen, was wirklich im Text steht.
         if len(_flach(nummer)) < 3 or _flach(nummer) not in _flach(text):
             werte["nummer"] = ""
+        if _flach(werte["kunde_name"]) not in _flach(text):
+            werte["kunde_name"] = ""
+        werte["kunde_anschrift"] = "\n".join(z for z in werte["kunde_anschrift"].splitlines()
+                                             if _flach(z) and _flach(z) in _flach(text))
         for feld in ("datum", "leistung_von", "leistung_bis", "faellig"):
             werte[feld] = _datum_im_text(werte[feld], text) if werte[feld] else ""
         werte["betrag"] = _betrag_im_text(werte["betrag"], text) if werte["betrag"] else ""
@@ -230,3 +265,107 @@ def vorschlag(roh: bytes, ki, kunden: list[sqlite3.Row], absender: str = "") -> 
     werte["kunde_id"] = _kunde(werte["kunde_name"], text, kunden)
     werte["steuerfall"] = _steuerfall(text) or _steuerfall(a.get("steuerhinweis") or "")
     return {**werte, "quelle": "Bild" if bild else "Text", "hinweis": hinweis}
+
+
+# --- Stapel: mehrere alte Rechnungen auf einmal ---------------------------------------------
+
+ZWISCHENABLAGE = "nachtrag"  # Unterordner im Datenordner für hochgeladene PDFs bis zum Speichern
+_sperre = threading.Lock()
+
+
+def zwischen_pfad(ordner: Path, schluessel: str) -> Path:
+    return ordner / ZWISCHENABLAGE / f"{schluessel}.pdf"
+
+
+def stapel_anlegen(db: sqlite3.Connection, ordner: Path, dateien) -> int:
+    """Legt hochgeladene PDFs (Paare aus Dateiname und Inhalt) zum Auslesen ab. Gibt die Zahl der PDFs zurück."""
+    (ordner / ZWISCHENABLAGE).mkdir(exist_ok=True)
+    angenommen = 0
+    for name, roh in dateien:
+        if not roh.startswith(b"%PDF"):
+            continue
+        schluessel = secrets.token_hex(16)
+        zwischen_pfad(ordner, schluessel).write_bytes(roh)
+        db.execute("INSERT INTO nachtrag_stapel (schluessel, dateiname, status, erstellt) VALUES (?, ?, 'wartet', ?)",
+                   (schluessel, name or "Rechnung.pdf", datetime.now().isoformat(timespec="seconds")))
+        angenommen += 1
+    return angenommen
+
+
+def stapel(db: sqlite3.Connection) -> list[dict]:
+    """Einträge des Stapels mit ihrem Vorschlag (dict), älteste zuerst."""
+    return [{**dict(z), "vorschlag": json.loads(z["vorschlag"] or "{}")}
+            for z in db.execute("SELECT * FROM nachtrag_stapel ORDER BY id")]
+
+
+def vollstaendig(eintrag: dict) -> bool:
+    """Ohne Durchsicht übernehmbar: alles Nötige gelesen und nachgeprüft (nicht aus einem Scan)."""
+    v = eintrag["vorschlag"]
+    return (eintrag["status"] == "gelesen" and v.get("quelle") in ("E-Rechnung", "Text")
+            and all(v.get(k) for k in ("nummer", "datum", "betrag")) and bool(v.get("kunde_id") or v.get("kunde_name")))
+
+
+def formularwerte(vorschlag: dict, kunden: list[sqlite3.Row]) -> dict:
+    """Werte fürs Nachtrag-Formular aus einem gelesenen PDF.
+
+    Den Kunden gleicht es mit der heutigen Kundenliste ab: Ein Kunde aus einem früheren PDF der
+    Liste ist inzwischen vielleicht angelegt. Ist er unbekannt, steht „neu“ mit Name und Anschrift
+    aus dem PDF darin, und `rechnungen.nachtragen` legt ihn zusammen mit der Rechnung an.
+    """
+    felder = ("nummer", "datum", "leistung_von", "leistung_bis", "faellig", "betrag", "steuerfall",
+              "beschreibung", "bezug")
+    werte = {k: vorschlag.get(k) or "" for k in felder}
+    name = vorschlag.get("kunde_name") or ""
+    bekannt = vorschlag.get("kunde_id") if vorschlag.get("kunde_id") in {k["id"] for k in kunden} else None
+    werte["kunde_id"] = bekannt or _kunde(name, "", kunden) or ("neu" if name else "")
+    if werte["kunde_id"] == "neu":
+        werte |= {"neuer_kunde_name": name, "neuer_kunde_anschrift": vorschlag.get("kunde_anschrift") or ""}
+    return werte
+
+
+def stapel_abarbeiten(ordner: Path, ki_fuer) -> None:
+    """Liest wartende PDFs nacheinander aus. Läuft schon ein Durchgang, passiert nichts."""
+    if not _sperre.acquire(blocking=False):
+        return
+    db = None
+    try:
+        db = dbmod.verbinden(ordner)
+        db.execute("UPDATE nachtrag_stapel SET status = 'wartet' WHERE status = 'liest'")  # nach Neustart
+        while True:
+            z = db.execute("SELECT * FROM nachtrag_stapel WHERE status = 'wartet' ORDER BY id LIMIT 1").fetchone()
+            if z is None:
+                break
+            db.execute("UPDATE nachtrag_stapel SET status = 'liest' WHERE id = ?", (z["id"],))
+            einst = dbmod.einstellungen(db)
+            kunden = db.execute("SELECT * FROM kunden ORDER BY name COLLATE NOCASE").fetchall()
+            try:
+                v = vorschlag(zwischen_pfad(ordner, z["schluessel"]).read_bytes(), ki_fuer(einst), kunden,
+                              einst.get("name", ""))
+                status = "gelesen"
+            except ValueError as fehler:  # kein lesbares PDF: Eintrag zeigt den Grund
+                v, status = {"hinweis": str(fehler)}, "fehler"
+            except OSError:
+                v, status = {"hinweis": "Die hochgeladene Datei fehlt. Bitte noch einmal auswählen."}, "fehler"
+            except Exception as fehler:
+                v, status = {"hinweis": f"Nicht lesbar ({type(fehler).__name__}). Bitte von Hand eintragen."}, "fehler"
+            db.execute("UPDATE nachtrag_stapel SET status = ?, vorschlag = ? WHERE id = ?",
+                       (status, json.dumps(v, ensure_ascii=False, default=str), z["id"]))
+    finally:
+        if db is not None:
+            db.close()
+        _sperre.release()
+
+
+def stapel_anstossen(ordner: Path, ki_fuer) -> None:
+    threading.Thread(target=stapel_abarbeiten, args=(ordner, ki_fuer), daemon=True, name="nachtrag").start()
+
+
+def stapel_laeuft() -> bool:
+    return _sperre.locked()
+
+
+def stapel_entfernen(db: sqlite3.Connection, ordner: Path, eintrag_id: int) -> None:
+    z = db.execute("SELECT schluessel FROM nachtrag_stapel WHERE id = ?", (eintrag_id,)).fetchone()
+    if z:
+        zwischen_pfad(ordner, z["schluessel"]).unlink(missing_ok=True)
+        db.execute("DELETE FROM nachtrag_stapel WHERE id = ?", (eintrag_id,))

@@ -149,6 +149,16 @@ CREATE TABLE IF NOT EXISTS loeschungen (
     geloescht TEXT NOT NULL
 );
 
+-- Alte Rechnungen, die gerade ausgelesen werden oder auf Durchsicht warten (nachtrag.py)
+CREATE TABLE IF NOT EXISTS nachtrag_stapel (
+    id INTEGER PRIMARY KEY,
+    schluessel TEXT NOT NULL UNIQUE,
+    dateiname TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'wartet',
+    vorschlag TEXT,
+    erstellt TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS hinweise (
     id INTEGER PRIMARY KEY,
     mail_id INTEGER REFERENCES mails(id) ON DELETE CASCADE,

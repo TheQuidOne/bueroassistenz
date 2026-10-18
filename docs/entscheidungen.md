@@ -206,6 +206,25 @@ Grundlage des Honorars (JVEG).
   E-Rechnung als Hinweis (IncludedNote).
 - Geprüft mit Mustang: Rechnung mit IK und Zusatztext gültig (PDF/A-3, EN 16931).
 
+## Viele alte Rechnungen auf einmal, Kunden aus dem PDF (2026-10-18)
+
+- **Mehrere PDFs** lassen sich auf einmal auswählen. Sie landen in der Tabelle
+  `nachtrag_stapel` (PDF im Datenordner unter `nachtrag/`), ein Hintergrund-Thread liest sie
+  nacheinander (`nachtrag.stapel_abarbeiten`, nie zwei gleichzeitig; nach einem Neustart
+  geht es beim Öffnen der Seite weiter). Die Seite zeigt den Fortschritt und lädt nach.
+- **Auf einmal übernehmen** nur, wenn Nummer, Datum, Betrag und Kunde im PDF selbst stehen
+  (E-Rechnung oder Text-PDF, nicht Scan). Alles andere einzeln über „Prüfen“. „Bezahlt am“
+  je Zeile, leer heißt offen. Ein Erfinden des Zahldatums gibt es nicht.
+- **Kunde erkennen**: gleicher Name, oder einer enthält alle wesentlichen Wörter des anderen
+  (mindestens zwei), oder ein unvollständig gelesener Name, dessen voller Kundenname im
+  Dokument steht. Nicht mehr „ein gemeinsames Wort“: Amtsgericht und Landgericht derselben
+  Stadt sind verschiedene Kunden. Lieber einen neuen vorschlagen als den falschen wählen.
+- **Unbekannter Kunde**: Name und Anschrift aus dem PDF (E-Rechnung: Käuferadresse; Text:
+  nur Zeilen, die wirklich im Text stehen) werden als „Neuer Kunde“ vorgeschlagen.
+  Angelegt wird er erst zusammen mit der Rechnung in derselben Transaktion, und nur, wenn
+  es keinen Kunden mit gleichem Namen gibt. Mehrere PDFs desselben neuen Kunden ergeben
+  also einen Kunden.
+
 ## Zahlungsziel in Werktagen, Dateiname der PDFs (2026-10-18)
 
 - **Zahlungsziel** zählt standardmäßig in Werktagen: Montag bis Freitag, ohne die
