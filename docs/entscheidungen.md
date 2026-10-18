@@ -206,6 +206,24 @@ Grundlage des Honorars (JVEG).
   E-Rechnung als Hinweis (IncludedNote).
 - Geprüft mit Mustang: Rechnung mit IK und Zusatztext gültig (PDF/A-3, EN 16931).
 
+## Sortieren, QR-Code abschaltbar, Rechnungsnummer frei wählbar (2026-10-18)
+
+- **Rechnungsliste** nach Nummer, Kunde, Datum, Fällig, Status oder Betrag sortierbar
+  (Spaltenkopf anklicken, erneut für die andere Richtung). Nummern sortieren nach Zahlen,
+  also „2026-9-…“ vor „2026-10-…“. Ohne Auswahl bleibt die alte Reihenfolge.
+- **QR-Code** auf Rechnungen und Erinnerungen in den Einstellungen abschaltbar
+  (`girocode`, Standard an). Der Zahlungshinweis mit IBAN bleibt.
+- **Rechnungsnummer:** Gewünscht war, ausgestellte Rechnungen löschen und ihre Nummer wieder
+  freigeben zu können, oder die Nummer selbst einzutragen, mit einem Vorschlag des Programms.
+  Umgesetzt ist der zweite Weg: Beim Ausstellen und bei der Rechnungskorrektur steht der
+  Vorschlag (`naechste_nummer`) in einem Feld und lässt sich überschreiben. Geprüft wird nur,
+  dass die Nummer nicht leer, höchstens 40 Zeichen lang und noch nicht vergeben ist
+  (`rechnungen.nummer_pruefen`). Das Storno nimmt weiter den Vorschlag.
+- **Bewusst nicht:** Ausgestellte Rechnungen löschen. Eine verschickte Rechnung ist ein Beleg
+  (GoBD); für Fehler gibt es Rechnungskorrektur und Storno. Eine Lücke in der Nummernfolge
+  lässt sich mit der freien Nummer selbst schließen. Lücken sind zulässig, wenn sie erklärbar
+  sind.
+
 ## Name und Veröffentlichung (2026-10-17)
 
 - **Name:** „Büroassistenz“ mit der Unterzeile „Rechnungen, Zahlungen, Mails · lokal mit

@@ -12,9 +12,12 @@
     {% if r.status == 'entwurf' %}
       <a class="knopf" href="{{ url_for('rechnung_bearbeiten', rechnung_id=r.id) }}">{{ symbol('stift') }}Bearbeiten</a>
       <a class="knopf" href="{{ url_for('rechnung_pdf', rechnung_id=r.id) }}" target="_blank" data-tour="vorschau">{{ symbol('auge') }}Vorschau</a>
-      <form class="inline" method="post" action="{{ url_for('rechnung_ausstellen', rechnung_id=r.id) }}"
-            onsubmit="return confirm('Rechnung jetzt ausstellen?\n\nSie bekommt ihre Nummer und lässt sich danach nicht mehr ändern.')">
+      <form class="inline nummer-ausstellen" method="post" action="{{ url_for('rechnung_ausstellen', rechnung_id=r.id) }}"
+            onsubmit="return confirm('Rechnung mit der Nummer ' + this.nummer.value + ' ausstellen?\n\nDanach lässt sie sich nicht mehr ändern.')">
         <input type="hidden" name="csrf" value="{{ csrf }}">
+        <label for="nummer" class="leise klein">Rechnungsnr.</label>
+        <input id="nummer" name="nummer" value="{{ vorschlag_nummer }}" required maxlength="40"
+               title="Vorschlag des Programms. Sie können eine andere, noch freie Nummer eintragen." data-tour="nummer-vorschlag">
         <button class="haupt" data-tour="ausstellen">{{ symbol('haken') }}Ausstellen</button>
       </form>
     {% else %}
@@ -100,7 +103,7 @@
     {% if r.status == 'entwurf' %}
     <div class="karte">
       <h3 style="margin: 0 0 6px; font-size: 15px">Noch ein Entwurf</h3>
-      <p class="leise klein" style="margin: 0">Prüfen Sie die Vorschau. Beim Ausstellen bekommt die Rechnung ihre Nummer und wird als PDF abgelegt. Danach ist sie nicht mehr änderbar.</p>
+      <p class="leise klein" style="margin: 0">Prüfen Sie die Vorschau. Beim Ausstellen bekommt die Rechnung ihre Nummer und wird als PDF abgelegt. Danach ist sie nicht mehr änderbar. Die Nummer neben „Ausstellen“ schlägt das Programm vor. Sie können eine andere eintragen, solange es sie noch nicht gibt.</p>
       <form method="post" action="{{ url_for('rechnung_loeschen', rechnung_id=r.id) }}" onsubmit="return confirm('Entwurf löschen?')" style="margin-top: 14px">
         <input type="hidden" name="csrf" value="{{ csrf }}">
         <button class="zart gefahr klein-knopf">Entwurf löschen</button>

@@ -120,8 +120,14 @@ def erstellen(ordner: Path | None = None) -> Flask:
     def rechnungsliste():
         filter_ = request.args.get("filter", "alle")
         jahr = request.args.get("jahr", type=int)
-        return render_template("rechnungen.html", liste=rechnungen.liste(verbindung(), filter_, jahr),
-                               filter=filter_, jahr=jahr)
+        sortierung = request.args.get("sort", "")
+        if sortierung not in rechnungen.SORTIERUNGEN:
+            sortierung = ""
+        richtung = request.args.get("richtung") or rechnungen.SORTIERUNGEN.get(sortierung, "auf")
+        return render_template("rechnungen.html", filter=filter_, jahr=jahr, sortierung=sortierung,
+                               richtung=richtung, standard_richtung=rechnungen.SORTIERUNGEN,
+                               liste=rechnungen.liste(verbindung(), filter_, jahr, sortierung=sortierung,
+                                                      absteigend=richtung == "ab"))
 
     def formular_daten() -> dict:
         f = request.form
@@ -139,7 +145,9 @@ def erstellen(ordner: Path | None = None) -> Flask:
     def formular(daten: dict, rechnung_id: int | None = None, berichtigung=None):
         db = verbindung()
         einst = dbmod.einstellungen(db)
+        vorschlag = rechnungen.naechste_nummer(db, date.today(), einst) if berichtigung else ""
         return render_template("rechnung_form.html", daten=daten, rechnung_id=rechnung_id, berichtigung=berichtigung,
+                               vorschlag_nummer=request.form.get("nummer") or vorschlag,
                                kunden=rechnungen.kunden(db), vorlagen=rechnungen.vorlagen(db), einst=einst)
 
     def daten_aus_rechnung(db, r) -> dict:
@@ -229,7 +237,8 @@ def erstellen(ordner: Path | None = None) -> Flask:
             return formular(daten_aus_rechnung(db, r), berichtigung=r)
         daten = formular_daten()
         try:
-            neu_id = rechnungen.berichtigen(db, rechnung_id, daten, dbmod.einstellungen(db), ordner=ordner)
+            neu_id = rechnungen.berichtigen(db, rechnung_id, daten, dbmod.einstellungen(db), ordner=ordner,
+                                            nummer=request.form.get("nummer"))
         except Fehler as fehler:
             flash(str(fehler), "fehler")
             return formular(daten, berichtigung=r)
@@ -350,6 +359,8 @@ def erstellen(ordner: Path | None = None) -> Flask:
             positionen=rechnungen.positionen(db, rechnung_id), zahlungen=rechnungen.zahlungen(db, rechnung_id),
             offen=rest, zustand=zustand, zustand_text=zustand_text, storno=storno, original=original,
             ersetzt_rechnung=ersetzt_rechnung, ersetzt_durch=ersetzt_durch,
+            vorschlag_nummer=rechnungen.naechste_nummer(db, date.today(), dbmod.einstellungen(db))
+            if r["status"] == "entwurf" else "",
             zeitraum=rechnungen.leistungszeitraum(r, rechnungen.positionen(db, rechnung_id)),
             mail_hinweise=hinweise.zur_rechnung(db, rechnung_id),
             eingaenge=db.execute(
@@ -370,7 +381,7 @@ def erstellen(ordner: Path | None = None) -> Flask:
     def rechnung_ausstellen(rechnung_id):
         db = verbindung()
         antwort = aktion(rechnung_id, lambda: rechnungen.ausstellen(
-            db, rechnung_id, dbmod.einstellungen(db), ordner=ordner),
+            db, rechnung_id, dbmod.einstellungen(db), ordner=ordner, nummer=request.form.get("nummer")),
             "Rechnung {ergebnis} ist ausgestellt. Das PDF liegt im Ordner „rechnungen“.")
         return antwort or redirect(url_for("rechnung_ansehen", rechnung_id=rechnung_id))
 

@@ -14,14 +14,22 @@
 
 <nav class="segmente" aria-label="Filter">
   {% for schluessel, text in [('alle', 'Alle'), ('offen', 'Offen'), ('ueberfaellig', 'Überfällig'), ('bezahlt', 'Bezahlt'), ('entwurf', 'Entwürfe')] %}
-  <a href="{{ url_for('rechnungsliste', filter=schluessel, jahr=jahr) }}" {% if filter == schluessel %}aria-current="page"{% endif %}>{{ text }}</a>
+  <a href="{{ url_for('rechnungsliste', filter=schluessel, jahr=jahr, sort=sortierung or None, richtung=richtung if sortierung else None) }}" {% if filter == schluessel %}aria-current="page"{% endif %}>{{ text }}</a>
   {% endfor %}
 </nav>
 
 <div class="karte ohne-rand">
   {% if liste %}
   <div class="tabelle-huelle"><table>
-    <thead><tr><th>Nummer</th><th>Kunde</th><th>Datum</th><th>Fällig</th><th>Status</th><th class="rechts">Betrag</th></tr></thead>
+    <thead><tr>
+      {% for spalte, titel in [('nummer', 'Nummer'), ('kunde', 'Kunde'), ('datum', 'Datum'), ('faellig', 'Fällig'), ('status', 'Status'), ('betrag', 'Betrag')] %}
+      {% set aktiv = sortierung == spalte %}
+      {% set naechste = ('ab' if richtung == 'auf' else 'auf') if aktiv else standard_richtung[spalte] %}
+      <th class="{{ 'rechts' if spalte == 'betrag' }}" {% if aktiv %}aria-sort="{{ 'ascending' if richtung == 'auf' else 'descending' }}"{% endif %}>
+        <a class="sortieren {{ 'aktiv' if aktiv }}" href="{{ url_for('rechnungsliste', filter=filter, jahr=jahr, sort=spalte, richtung=naechste) }}" title="Nach {{ titel }} sortieren">{{ titel }}<span class="pfeil" aria-hidden="true">{{ ('↑' if richtung == 'auf' else '↓') if aktiv else '↕' }}</span></a>
+      </th>
+      {% endfor %}
+    </tr></thead>
     <tbody>
     {% for e in liste %}
       <tr class="klickbar" data-href="{{ url_for('rechnung_ansehen', rechnung_id=e.r.id) }}">

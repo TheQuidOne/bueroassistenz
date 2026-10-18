@@ -401,16 +401,31 @@ def _pruefe_absender(einst: dict) -> None:
 
 def _ablegen(ordner: Path, nummer: str, jahr: int, daten: bytes, name: str | None = None) -> tuple[str, str]:
     """Schreibt das PDF nach rechnungen/JJJJ/ und gibt (relativer Pfad, sha256) zurück."""
-    ziel = ordner / "rechnungen" / str(jahr) / (name or f"{nummer}.pdf")
+    ziel = ordner / "rechnungen" / str(jahr) / (name or f"{_dateiname(nummer)}.pdf")
     ziel.parent.mkdir(parents=True, exist_ok=True)
     with open(ziel, "xb") as datei:  # niemals überschreiben
         datei.write(daten)
     return str(ziel.relative_to(ordner)), hashlib.sha256(daten).hexdigest()
 
 
+def nummer_pruefen(db: sqlite3.Connection, nummer: str) -> str:
+    """Eine von Hand eingetragene Rechnungsnummer: nicht leer, nicht zu lang, noch nicht vergeben."""
+    nummer = " ".join((nummer or "").split())
+    if not nummer:
+        raise Fehler("Bitte eine Rechnungsnummer eintragen oder den Vorschlag übernehmen.")
+    if len(nummer) > 40:
+        raise Fehler("Die Rechnungsnummer ist zu lang (höchstens 40 Zeichen).")
+    if db.execute("SELECT 1 FROM rechnungen WHERE nummer = ?", (nummer,)).fetchone():
+        raise Fehler(f"Die Rechnungsnummer {nummer} ist schon vergeben. Jede Nummer gibt es nur einmal.")
+    return nummer
+
+
 def ausstellen(db: sqlite3.Connection, rechnung_id: int, einst: dict, heute: date | None = None,
-               ordner: Path | None = None) -> str:
-    """Vergibt die Nummer, legt das PDF ab und sperrt die Rechnung. Gibt die Nummer zurück."""
+               ordner: Path | None = None, nummer: str | None = None) -> str:
+    """Vergibt die Nummer, legt das PDF ab und sperrt die Rechnung. Gibt die Nummer zurück.
+
+    Ohne `nummer` nimmt sie den Vorschlag (naechste_nummer), sonst die eingetragene, sofern frei.
+    """
     heute = heute or date.today()
     ordner = ordner or dbmod.datenordner()
     _pruefe_absender(einst)
@@ -423,7 +438,7 @@ def ausstellen(db: sqlite3.Connection, rechnung_id: int, einst: dict, heute: dat
         if not von:
             raise Fehler("Bitte das Leistungsdatum angeben (oben oder bei den Positionen).")
         k = kunde(db, r["kunde_id"])
-        nummer = naechste_nummer(db, heute, einst)
+        nummer = nummer_pruefen(db, nummer) if nummer is not None else naechste_nummer(db, heute, einst)
         db.execute(
             "UPDATE rechnungen SET nummer = ?, status = 'ausgestellt', datum = ?, faellig = ?, "
             "leistung_von = ?, leistung_bis = ?, empfaenger = ?, steuerhinweis = ?, ausgestellt = ? "
@@ -479,7 +494,7 @@ def stornieren(db: sqlite3.Connection, rechnung_id: int, einst: dict, heute: dat
 
 
 def berichtigen(db: sqlite3.Connection, rechnung_id: int, daten: dict, einst: dict, heute: date | None = None,
-                ordner: Path | None = None) -> int:
+                ordner: Path | None = None, nummer: str | None = None) -> int:
     """Stellt eine Rechnungskorrektur aus, die die Rechnung ersetzt (§ 31 Abs. 5 UStDV).
 
     Die alte Rechnung und ihr PDF bleiben unverändert, sie gilt danach als „berichtigt“.
@@ -492,7 +507,7 @@ def berichtigen(db: sqlite3.Connection, rechnung_id: int, daten: dict, einst: di
     neu_id = entwurf_speichern(db, daten, einst)
     db.execute("UPDATE rechnungen SET ersetzt = ? WHERE id = ?", (rechnung_id, neu_id))
     try:
-        ausstellen(db, neu_id, einst, heute, ordner)
+        ausstellen(db, neu_id, einst, heute, ordner, nummer)
     except Exception:
         db.execute("DELETE FROM rechnungen WHERE id = ?", (neu_id,))  # kein halber Stand
         raise
@@ -719,8 +734,30 @@ def zustand(r: sqlite3.Row, rest: int, heute: date) -> tuple[str, str]:
     return "offen", f"Offen{teil}"
 
 
+# Spalten der Rechnungsliste, nach denen sortiert werden kann, mit der Richtung beim ersten Klick.
+SORTIERUNGEN = {"nummer": "auf", "kunde": "auf", "datum": "ab", "faellig": "auf", "status": "auf", "betrag": "ab"}
+_STATUS_REIHE = {"ueberfaellig": 0, "offen": 1, "entwurf": 2, "bezahlt": 3, "storniert": 4}
+
+
+def _natuerlich(text: str | None) -> tuple:
+    """„2026-10-147“ nach Zahlen sortieren, nicht nach Zeichen („2026-9-…“ vor „2026-10-…“)."""
+    return tuple((0, int(t), "") if t.isdigit() else (1, 0, t.casefold()) for t in re.split(r"(\d+)", text or "") if t)
+
+
+def _schluessel(spalte: str):
+    return {
+        "nummer": lambda e: (e["r"]["nummer"] is None, _natuerlich(e["r"]["nummer"])),
+        "kunde": lambda e: e["r"]["kunde_name"].casefold(),
+        "datum": lambda e: e["r"]["datum"] or e["r"]["erstellt"][:10],
+        "faellig": lambda e: (not e["r"]["faellig"], e["r"]["faellig"] or ""),
+        "status": lambda e: (_STATUS_REIHE.get(e["zustand"], 9), e["r"]["faellig"] or ""),
+        "betrag": lambda e: e["r"]["brutto"],
+    }[spalte]
+
+
 def liste(db: sqlite3.Connection, filter_: str = "alle", jahr: int | None = None,
-          heute: date | None = None) -> list[dict]:
+          heute: date | None = None, sortierung: str = "", absteigend: bool = False) -> list[dict]:
+    """Rechnungen mit Zustand. Ohne `sortierung`: Entwürfe zuerst, dann die neuesten."""
     heute = heute or date.today()
     sql = (
         "SELECT r.*, k.name AS kunde_name, "
@@ -741,6 +778,8 @@ def liste(db: sqlite3.Connection, filter_: str = "alle", jahr: int | None = None
         if filter_ in ("ueberfaellig", "entwurf", "bezahlt") and schluessel != filter_:
             continue
         ergebnis.append({"r": r, "offen": rest, "zustand": schluessel, "zustand_text": text})
+    if sortierung in SORTIERUNGEN:
+        ergebnis.sort(key=_schluessel(sortierung), reverse=absteigend)
     return ergebnis
 
 

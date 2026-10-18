@@ -42,11 +42,18 @@
 
   <div class="formular-abschnitt">
     <div><h3>Bankverbindung</h3><p>Für den Zahlungshinweis und den Überweisungs-QR-Code auf der Rechnung.</p></div>
+    <div>
     <div class="felder">
       <div class="feld"><label for="iban">IBAN</label><input id="iban" name="iban" value="{{ einst.iban }}"></div>
       <div class="feld"><label for="bic">BIC</label><input id="bic" name="bic" value="{{ einst.bic }}"></div>
       <div class="feld"><label for="bank">Bank</label><input id="bank" name="bank" value="{{ einst.bank }}"></div>
       <div class="feld"><label for="kontoinhaber">Kontoinhaber <span class="leise">(falls abweichend)</span></label><input id="kontoinhaber" name="kontoinhaber" value="{{ einst.kontoinhaber }}"></div>
+    </div>
+    <div class="feld" style="margin-top: 4px" data-tour="girocode">
+      <label class="ankreuzen"><input type="checkbox" name="girocode" value="1" {% if einst.girocode != '0' %}checked{% endif %}> Überweisungs-QR-Code auf Rechnungen drucken</label>
+      <input type="hidden" name="girocode" value="0">
+      <div class="hilfe">Damit überweisen Kunden per Banking-App ohne Abtippen. Ausgeschaltet steht nur der Zahlungshinweis mit IBAN auf der Rechnung.</div>
+    </div>
     </div>
   </div>
 

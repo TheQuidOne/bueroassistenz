@@ -125,7 +125,9 @@
     <div class="knoepfe">
       {% if berichtigung %}
       <a class="knopf zart" href="{{ url_for('rechnung_ansehen', rechnung_id=berichtigung.id) }}">Abbrechen</a>
-      <button class="haupt" data-tour="korrektur-ausstellen" onclick="return confirm('Rechnungskorrektur jetzt ausstellen?\n\nSie bekommt eine neue Nummer und ersetzt Rechnung {{ berichtigung.nummer }}.')">Rechnungskorrektur ausstellen</button>
+      <span class="nummer-ausstellen"><label for="nummer" class="leise klein">Rechnungsnr.</label>
+        <input id="nummer" name="nummer" value="{{ vorschlag_nummer }}" required maxlength="40" title="Vorschlag des Programms. Sie können eine andere, noch freie Nummer eintragen."></span>
+      <button class="haupt" data-tour="korrektur-ausstellen" onclick="return confirm('Rechnungskorrektur mit der Nummer ' + document.getElementById('nummer').value + ' ausstellen?\n\nSie ersetzt Rechnung {{ berichtigung.nummer }}.')">Rechnungskorrektur ausstellen</button>
       {% else %}
       <a class="knopf zart" href="{{ url_for('rechnung_ansehen', rechnung_id=rechnung_id) if rechnung_id else url_for('rechnungsliste') }}">Abbrechen</a>
       <button class="haupt" data-tour="entwurf-speichern">Entwurf speichern</button>

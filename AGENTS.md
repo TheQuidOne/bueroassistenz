@@ -28,7 +28,8 @@ Für Claude Code, Codex und andere Agenten. Zuerst die `README.md` (für den Kun
   läuft ohne KI. Die KI macht nur Vorschläge, der Kunde bestätigt.
 - Ausgestellte Rechnungen nie ändern oder löschen, auch nicht per Migration. Korrektur nur
   per Rechnungskorrektur (`rechnungen.berichtigen`, ersetzt die alte, Status „berichtigt“)
-  oder Storno; geändert wird an der alten Rechnung nur der Status. PDFs werden mit
+  oder Storno; geändert wird an der alten Rechnung nur der Status. Die Nummer darf beim
+  Ausstellen frei gewählt werden (`nummer_pruefen`), ein Löschen gibt es nicht. PDFs werden mit
   `open(..., "xb")` geschrieben und nie überschrieben.
 - Ausgestellte PDFs sind E-Rechnungen (ZUGFeRD EN 16931, PDF/A-3). Nach Änderungen an
   `pdf.py` oder `zugferd.py` erneut mit Mustang prüfen (siehe `docs/entscheidungen.md`).

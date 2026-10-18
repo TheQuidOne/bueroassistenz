@@ -41,6 +41,7 @@ class Absender:
     schrift: str = "noto"  # Schlüssel aus pdf.SCHRIFTARTEN
     schluss: str = ""  # Text am Ende, wenn die Rechnung keinen eigenen hat
     grussformel: str = "Mit freundlichen Grüßen"  # vor Unterschrift und Name, leer = keine
+    girocode: str = "1"  # „0“ = kein Überweisungs-QR-Code auf Rechnungen und Erinnerungen
 
 
 @dataclass

@@ -104,7 +104,7 @@ def _iban_gueltig(iban: str) -> bool:
 def girocode(absender: Absender, cent: int, nummer: str) -> segno.QRCode | None:
     """EPC-QR-Code (Version 002) für eine SEPA-Überweisung, None wenn keiner möglich ist."""
     iban = absender.iban.replace(" ", "").upper()
-    if cent <= 0 or not _iban_gueltig(iban):
+    if absender.girocode == "0" or cent <= 0 or not _iban_gueltig(iban):
         return None
     bic = absender.bic.replace(" ", "").upper()
     if len(bic) not in (8, 11):

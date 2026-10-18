@@ -180,6 +180,7 @@ STANDARDS = {
     "einleitung": "",
     "schluss": "Vielen Dank für die Zusammenarbeit.",  # Text am Ende jeder Rechnung
     "grussformel": "Mit freundlichen Grüßen",  # vor der Unterschrift, leer = keine
+    "girocode": "1",  # Überweisungs-QR-Code auf Rechnungen: 1 an, 0 aus
     # Postfach (nur lesend). Das Passwort liegt im Schlüsselbund des Systems.
     "mail_anbieter": "",
     "mail_host": "",
