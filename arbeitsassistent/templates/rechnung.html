@@ -70,7 +70,7 @@
         {% if r.nummer %}<dt>Nummer</dt><dd>{{ r.nummer }}</dd>{% endif %}
         {% if r.datum %}<dt>Datum</dt><dd>{{ r.datum|datum }}</dd>{% endif %}
         <dt>Leistung</dt><dd>{% if zeitraum[0] %}{{ zeitraum[0]|datum }}{% if zeitraum[1] %} – {{ zeitraum[1]|datum }}{% endif %}{% else %}<span class="gefahr">fehlt noch</span>{% endif %}</dd>
-        {% if r.faellig and r.art == 'rechnung' %}<dt>Zahlbar bis</dt><dd>{{ r.faellig|datum }}</dd>{% elif r.status == 'entwurf' %}<dt>Zahlungsziel</dt><dd>{{ r.zahlungsziel }} {{ ZIEL_EINHEIT }}</dd>{% endif %}
+        {% if r.faellig and r.art == 'rechnung' %}<dt>Zahlbar bis</dt><dd>{{ r.faellig|datum }}</dd>{% elif r.status == 'entwurf' %}<dt>Zahlungsziel</dt><dd>{{ r.zahlungsziel }} Tage</dd>{% endif %}
         {% if r.bezug %}<dt>Ihr Zeichen</dt><dd>{{ r.bezug }}</dd>{% endif %}
       </dl>
     </div>

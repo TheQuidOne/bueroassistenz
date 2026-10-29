@@ -206,6 +206,15 @@ Grundlage des Honorars (JVEG).
   E-Rechnung als Hinweis (IncludedNote).
 - Geprüft mit Mustang: Rechnung mit IK und Zusatztext gültig (PDF/A-3, EN 16931).
 
+## Zahlungsziel wieder in Kalendertagen (2026-10-29)
+
+- Auf Wunsch des Kunden zurückgenommen: Das Zahlungsziel ist wieder schlicht Rechnungsdatum
+  plus N Kalendertage (Standard 14), Wochenenden und Feiertage zählen mit, und ein Ende am
+  Wochenende wird nicht verschoben. `fristen.py`, die Einstellungen „Zahlungsziel zählt
+  in“ und „Bundesland“ sowie das Paket `holidays` sind entfernt. Rechnungen, die in der
+  Zwischenzeit mit Werktagen ausgestellt wurden, behalten ihr gespeichertes Fälligkeitsdatum.
+  Der frei wählbare Dateiname aus demselben Update bleibt.
+
 ## Viele alte Rechnungen auf einmal, Kunden aus dem PDF (2026-10-18)
 
 - **Mehrere PDFs** lassen sich auf einmal auswählen. Sie landen in der Tabelle
@@ -226,6 +235,8 @@ Grundlage des Honorars (JVEG).
   also einen Kunden.
 
 ## Zahlungsziel in Werktagen, Dateiname der PDFs (2026-10-18)
+
+> Der Teil zum Zahlungsziel ist am 2026-10-29 zurückgenommen (siehe oben).
 
 - **Zahlungsziel** zählt standardmäßig in Werktagen: Montag bis Freitag, ohne die
   Feiertage des gewählten Bundeslands (Einstellungen, Standard: nur bundesweite). Umstellbar

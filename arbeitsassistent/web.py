@@ -13,7 +13,7 @@ from markupsafe import Markup
 from flask import (Flask, Response, abort, flash, g, jsonify, redirect, render_template, request, send_file, session,
                    url_for)
 
-from . import UNTERZEILE, auswertung, fristen, hinweise, nachtrag, postfach, rechnungen, umsaetze, unterschrift
+from . import UNTERZEILE, auswertung, hinweise, nachtrag, postfach, rechnungen, umsaetze, unterschrift
 from . import db as dbmod
 from . import pdf as pdfmod
 from .geld import cent_aus_text, euro, menge_text
@@ -89,7 +89,6 @@ def erstellen(ordner: Path | None = None) -> Flask:
                 "EINNAHMEN": umsaetze.EINNAHMEN, "MONATE": MONATE, "MAILARTEN": MAILARTEN,
                 "UNTERZEILE": UNTERZEILE,
                 "zaehler": auswertung.zaehler(verbindung()), "ki_liest": postfach.fortschritt(),
-                "ZIEL_EINHEIT": fristen.einheit(dbmod.einstellungen(verbindung())),
                 "merken_angebot": session.pop("merken_angebot", None)}
 
     def zurueck(standard: str):
@@ -728,10 +727,6 @@ def erstellen(ordner: Path | None = None) -> Flask:
                     raise Fehler("Das Institutionskennzeichen (IK) hat genau 9 Ziffern.")
                 if werte.get("schrift", "noto") not in pdfmod.SCHRIFTARTEN:
                     raise Fehler("Unbekannte Schrift.")
-                if werte.get("zahlungsziel_zaehlung", "werktage") not in fristen.ZAEHLWEISEN:
-                    raise Fehler("Unbekannte Zählweise für das Zahlungsziel.")
-                if werte.get("bundesland", "") not in fristen.BUNDESLAENDER:
-                    raise Fehler("Unbekanntes Bundesland.")
                 werte["dateiname"] = " ".join(werte.get("dateiname", "").split()) or "{nummer}"
                 rechnungen.dateiname_pruefen(werte["dateiname"])
                 rechnungen.nummer_format_pruefen(werte["nummer_format"], werte.get("nummer_neu_ab", "jahr"))
@@ -747,11 +742,9 @@ def erstellen(ordner: Path | None = None) -> Flask:
                                naechste=rechnungen.naechste_nummer(db, date.today(), einst),
                                unterschrift=unterschrift.pfad(ordner).is_file(),
                                schriftarten=pdfmod.SCHRIFTARTEN, arial=pdfmod.schriftdateien("arial"),
-                               zaehlweisen=fristen.ZAEHLWEISEN, bundeslaender=fristen.BUNDESLAENDER,
                                beispiel_datei=rechnungen.dateiname(einst, rechnungen.naechste_nummer(
                                    db, date.today(), einst), "Musterkunde GmbH", date.today()) + ".pdf",
-                               beispiel_faellig=fristen.faellig(date.today(), int(einst.get("zahlungsziel") or 14),
-                                                                einst))
+                               beispiel_faellig=date.today() + timedelta(days=int(einst.get("zahlungsziel") or 14)))
 
     @app.get("/einstellungen/schriftprobe.pdf")
     def schriftprobe():

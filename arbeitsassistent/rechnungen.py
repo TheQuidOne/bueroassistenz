@@ -14,7 +14,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from . import db as dbmod
-from . import fristen, pdf, unterschrift, zugferd
+from . import pdf, unterschrift, zugferd
 from .geld import anteil, cent_aus_text, mal, menge_aus_text
 from .modell import STEUERFAELLE, Absender, Fehler, OffeneRechnung, Position, RechnungsDruck
 
@@ -299,7 +299,7 @@ def druckdaten(db: sqlite3.Connection, rechnung_id: int, heute: date | None = No
         datum=datum,
         leistung_von=von or datum,
         leistung_bis=bis,
-        faellig=tag(r["faellig"]) or fristen.faellig(datum, r["zahlungsziel"], dbmod.einstellungen(db)),
+        faellig=tag(r["faellig"]) or datum + timedelta(days=r["zahlungsziel"]),
         empfaenger=r["empfaenger"],
         positionen=pos,
         netto=r["netto"],
@@ -470,7 +470,7 @@ def ausstellen(db: sqlite3.Connection, rechnung_id: int, einst: dict, heute: dat
             "UPDATE rechnungen SET nummer = ?, status = 'ausgestellt', datum = ?, faellig = ?, "
             "leistung_von = ?, leistung_bis = ?, empfaenger = ?, steuerhinweis = ?, ausgestellt = ? "
             "WHERE id = ?",
-            (nummer, iso(heute), iso(fristen.faellig(heute, r["zahlungsziel"], einst)), iso(von), iso(bis),
+            (nummer, iso(heute), iso(heute + timedelta(days=r["zahlungsziel"])), iso(von), iso(bis),
              empfaenger_text(k), steuerhinweis(r["steuerfall"], einst),
              datetime.now().isoformat(timespec="seconds"), rechnung_id),
         )
@@ -648,7 +648,7 @@ def nachtragen(db: sqlite3.Connection, daten: dict, einst: dict, ordner: Path | 
     if bis and bis < von:
         raise Fehler("Das Ende des Leistungszeitraums liegt vor dem Anfang.")
     ziel = int(k["zahlungsziel"] or einst.get("zahlungsziel") or 14)
-    faellig = datum_aus_text(daten.get("faellig")) or fristen.faellig(datum, ziel, einst)
+    faellig = datum_aus_text(daten.get("faellig")) or datum + timedelta(days=ziel)
     bezahlt_am = datum_aus_text(daten.get("bezahlt_am"))
     if original is not None and not original.startswith(b"%PDF"):
         raise Fehler("Das Original muss eine PDF-Datei sein.")
@@ -780,7 +780,7 @@ def erinnerung(db: sqlite3.Connection, rechnung_id: int, einst: dict, heute: dat
     if r["status"] != "ausgestellt" or r["art"] != "rechnung" or rest <= 0:
         raise Fehler("Für diese Rechnung ist nichts mehr offen.")
     daten = pdf.erinnerung_pdf(druckdaten(db, rechnung_id), absender(einst, ordner), rest, heute,
-                               fristen.faellig(heute, frist_tage, einst))
+                               heute + timedelta(days=frist_tage))
     basis = dateiname(einst, r["nummer"], kunde(db, r["kunde_id"])["name"], tag(r["datum"]) or heute)
     name = f"{basis}_Zahlungserinnerung_{heute.isoformat()}.pdf"
     try:

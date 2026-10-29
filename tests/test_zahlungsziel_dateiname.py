@@ -1,24 +1,12 @@
-"""Zahlungsziel in Werktagen (mit Feiertagen je Bundesland) und frei wählbarer Dateiname der Rechnungen."""
+"""Zahlungsziel in Kalendertagen (ohne Verschieben) und frei wählbarer Dateiname der Rechnungen."""
 from datetime import date
 
 import pytest
 
-from arbeitsassistent import fristen, rechnungen
+from arbeitsassistent import rechnungen
 from arbeitsassistent import db as dbmod
 from arbeitsassistent.modell import Fehler
 from tests.test_web import app, client, schluessel  # noqa: F401 (Fixtures der Weboberfläche)
-
-
-@pytest.mark.parametrize("start, tage, einst, erwartet", [
-    (date(2026, 10, 9), 14, {}, date(2026, 10, 29)),  # Fr + 14 Werktage
-    (date(2026, 12, 24), 2, {}, date(2026, 12, 29)),  # über Weihnachten und Wochenende
-    (date(2026, 6, 3), 1, {"bundesland": "BY"}, date(2026, 6, 5)),  # Fronleichnam in Bayern
-    (date(2026, 6, 3), 1, {}, date(2026, 6, 4)),  # bundesweit kein Feiertag
-    (date(2026, 10, 5), 12, {"zahlungsziel_zaehlung": "kalendertage"}, date(2026, 10, 19)),  # Sa → Mo
-    (date(2026, 10, 3), 0, {}, date(2026, 10, 5)),  # Feiertag am Samstag → Montag
-])
-def test_faelligkeit(start, tage, einst, erwartet):
-    assert fristen.faellig(start, tage, einst) == erwartet
 
 
 def entwurf(db, einst, kunde):
@@ -26,13 +14,15 @@ def entwurf(db, einst, kunde):
         {"datum": "2026-10-07", "beschreibung": "Einsatz", "menge": "1", "einzelpreis": "85"}]}, einst)
 
 
-def test_ausstellen_nach_zaehlweise(db, einst, kunde, ordner):
-    a = entwurf(db, einst, kunde)
-    rechnungen.ausstellen(db, a, einst, date(2026, 10, 9), ordner)
-    assert rechnungen.rechnung(db, a)["faellig"] == "2026-10-29"  # 14 Werktage
-    b = entwurf(db, einst, kunde)
-    rechnungen.ausstellen(db, b, {**einst, "zahlungsziel_zaehlung": "kalendertage"}, date(2026, 10, 9), ordner)
-    assert rechnungen.rechnung(db, b)["faellig"] == "2026-10-23"  # 14 Kalendertage, ein Freitag
+@pytest.mark.parametrize("ausgestellt, faellig", [
+    (date(2026, 10, 9), "2026-10-23"),  # Fr + 14 Tage
+    (date(2026, 10, 3), "2026-10-17"),  # endet an einem Samstag: bleibt Samstag
+    (date(2026, 12, 18), "2027-01-01"),  # endet an Neujahr: bleibt Neujahr
+])
+def test_zahlungsziel_in_kalendertagen(db, einst, kunde, ordner, ausgestellt, faellig):
+    rid = entwurf(db, einst, kunde)
+    rechnungen.ausstellen(db, rid, einst, ausgestellt, ordner)
+    assert rechnungen.rechnung(db, rid)["faellig"] == faellig
 
 
 def test_dateiname_nach_format(db, einst, kunde, ordner):
@@ -63,15 +53,14 @@ def test_dateiname_pruefen(muster, meldung):
 def test_einstellungen_und_download(app, client):
     csrf = schluessel(client)
     seite = client.get("/einstellungen").get_data(as_text=True)
-    assert "Zahlungsziel (Werktage)" in seite and "Dateiname der gespeicherten Rechnungen" in seite
+    assert "Zahlungsziel (Tage)" in seite and "Dateiname der gespeicherten Rechnungen" in seite
+    assert "Bundesland" not in seite and "Werktag" not in seite
     formular = {"csrf": csrf, "startnummer": "1", "zahlungsziel": "14", "nummer_format": "JJJJ-NNN",
-                "nummer_neu_ab": "jahr", "schrift": "noto", "zahlungsziel_zaehlung": "kalendertage",
-                "bundesland": "NW", "dateiname": "Rechnung_{nummer}"}
+                "nummer_neu_ab": "jahr", "schrift": "noto", "dateiname": "Rechnung_{nummer}"}
     antwort = client.post("/einstellungen", data=formular, follow_redirects=True).get_data(as_text=True)
     assert "Einstellungen gespeichert" in antwort and "Zahlungsziel (Tage)" in antwort
     einst = dbmod.einstellungen(dbmod.verbinden(app.config["ORDNER"]))
-    assert (einst["zahlungsziel_zaehlung"], einst["bundesland"], einst["dateiname"]) == (
-        "kalendertage", "NW", "Rechnung_{nummer}")
+    assert einst["dateiname"] == "Rechnung_{nummer}"
     assert "Rechnung_" in antwort and ".pdf</strong>" in antwort  # Beispiel-Dateiname
     falsch = client.post("/einstellungen", data={**formular, "dateiname": "{kunde}"}, follow_redirects=True)
     assert "braucht {nummer}" in falsch.get_data(as_text=True)

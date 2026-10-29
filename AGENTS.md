@@ -65,7 +65,6 @@ Für Claude Code, Codex und andere Agenten. Zuerst die `README.md` (für den Kun
 | `arbeitsassistent/rechnungen.py` | Kunden, Entwürfe, Nummernformat, Ausstellen, Storno, Berichtigung, Zahlungen, Vorlagen |
 | `arbeitsassistent/pdf.py` | Rechnungs- und Erinnerungs-PDF (fpdf2, Girocode mit segno, sRGB für PDF/A) |
 | `arbeitsassistent/zugferd.py` | E-Rechnung: CII-XML (EN 16931) erzeugen und ins PDF einbetten (drafthorse) |
-| `arbeitsassistent/fristen.py` | Zahlungsziel in Werk- oder Kalendertagen, Feiertage je Bundesland (`holidays`) |
 | `arbeitsassistent/nachtrag.py` | Alte Rechnungen: Werte aus E-Rechnung, Text oder Scan vorschlagen (KI nur Vorschlag); Liste `nachtrag_stapel` für viele PDFs, im Hintergrund nacheinander gelesen |
 | `arbeitsassistent/unterschrift.py` | Eingescannte Unterschrift aufbereiten; liegt nur als `unterschrift.png` im Datenordner |
 | `arbeitsassistent/bank.py` | CSV-Import aller gängigen Banken |

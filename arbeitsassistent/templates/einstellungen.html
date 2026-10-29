@@ -68,21 +68,9 @@
           </select>
           <div class="hilfe">Gilt, wenn beim Kunden nichts anderes steht.</div>
         </div>
-        <div class="feld"><label for="zahlungsziel">Zahlungsziel ({{ ZIEL_EINHEIT }})</label><input id="zahlungsziel" name="zahlungsziel" inputmode="numeric" value="{{ einst.zahlungsziel }}"></div>
-      </div>
-      <div class="felder" data-tour="zahlungsziel">
         <div class="feld">
-          <label for="zahlungsziel_zaehlung">Zahlungsziel zählt in</label>
-          <select id="zahlungsziel_zaehlung" name="zahlungsziel_zaehlung">
-            {% for schluessel, text in zaehlweisen.items() %}<option value="{{ schluessel }}" {% if einst.zahlungsziel_zaehlung == schluessel %}selected{% endif %}>{{ text }}</option>{% endfor %}
-          </select>
-          <div class="hilfe">Fällt das Ende auf ein Wochenende oder einen Feiertag, gilt der nächste Werktag. Heute ausgestellt wäre eine Rechnung fällig am {{ beispiel_faellig|datum }}.</div>
-        </div>
-        <div class="feld">
-          <label for="bundesland">Bundesland (für Feiertage)</label>
-          <select id="bundesland" name="bundesland">
-            {% for schluessel, text in bundeslaender.items() %}<option value="{{ schluessel }}" {% if einst.bundesland == schluessel %}selected{% endif %}>{{ text }}</option>{% endfor %}
-          </select>
+          <label for="zahlungsziel">Zahlungsziel (Tage)</label><input id="zahlungsziel" name="zahlungsziel" inputmode="numeric" value="{{ einst.zahlungsziel }}">
+          <div class="hilfe">Rechnungsdatum plus so viele Tage, Wochenenden und Feiertage zählen mit. Heute ausgestellt: fällig am {{ beispiel_faellig|datum }}.</div>
         </div>
       </div>
       <div class="felder" data-tour="rechnungsnummer">
